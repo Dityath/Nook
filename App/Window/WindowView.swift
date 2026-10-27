@@ -172,6 +172,7 @@ struct WindowView: View {
         .environmentObject(browserManager.splitManager)
         .environmentObject(hoverSidebarManager)
         .preferredColorScheme(resolvedColorScheme)
+        .nookResolvesGlassMaterial()
     }
 
     /// Accent of the space this window shows; nil for private windows, which keep their own look.

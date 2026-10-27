@@ -26,6 +26,7 @@ public enum NookDesign {
         public static let lg: CGFloat = 12     // essentials tile, card, settings group
         public static let xl: CGFloat = 16     // dialog, toast
         public static let xxl: CGFloat = 24    // command palette
+        public static let panel: CGFloat = 16  // floating glass panel: sidebar, AI panel, hover sidebar
 
         public static func shape(_ radius: CGFloat) -> RoundedRectangle {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -45,6 +46,7 @@ public enum NookDesign {
         public static let xxxl: CGFloat = 24
 
         public static let sidebarInset: CGFloat = 8
+        public static let panelInset: CGFloat = 8      // gap between a floating glass panel and the window edge
         public static let rowGap: CGFloat = 2
         public static let sectionGap: CGFloat = 10
         public static let rowPadding: CGFloat = 8
@@ -150,6 +152,9 @@ public enum NookDesign {
         public static let tintOpacity: Double = 0.18                       // accent-tinted control: chosen chip, own chat message
         public static let mediaScrim = Color.black.opacity(0.35)           // controls over video
         public static let hairline = Color.primary.opacity(0.08)
+        public static let glassRowSelected = Color.primary.opacity(0.12)   // selected row on a glass panel
+        public static let glassRowHover = Color.primary.opacity(0.06)      // hovered row on a glass panel
+        public static let inactivePanelDim = Color.black.opacity(0.08)     // glass panel in an inactive window
         public static let unloadedOpacity: Double = 0.55
         public static let dropBorderIdle = Color.secondary.opacity(0.3)    // dashed empty-state drop target
         public static let dropBorderActive = Color.primary.opacity(0.4)    // dashed drop target while dragging

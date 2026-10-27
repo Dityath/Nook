@@ -3,19 +3,17 @@
 //  View+Surface.swift
 //  Nook
 //
-//  The surface recipes every layer goes through. Nook draws no Liquid Glass: floating layers
-//  are solid cards, sidebar chrome and rows are Surface fills.
+//  The surface recipes every layer goes through. Floating layers and the selected row follow the
+//  window's `GlassMaterial` (View+Glass.swift): Liquid Glass on macOS 26, the solid card with
+//  Reduce Transparency or Increase Contrast, and the old solid look before 26.
 //
 
 import SwiftUI
 
 public extension View {
-    /// A layer that floats over content: solid raised card, hairline edge, floating shadow.
+    /// A layer that floats over content: glass, or a solid raised card with a hairline edge.
     func nookFloatingSurface<S: InsettableShape>(in shape: S) -> some View {
-        self.clipShape(shape)
-            .background(shape.fill(NookDesign.Surface.raised))
-            .overlay(shape.strokeBorder(NookDesign.Surface.hairline, lineWidth: NookDesign.Size.hairlineWidth))
-            .nookElevation(.floating)
+        modifier(FloatingSurface(shape: shape))
     }
 
     /// Controls over video: a dark scrim, whatever the page or appearance.
@@ -23,12 +21,10 @@ public extension View {
         background(shape.fill(NookDesign.Surface.mediaScrim))
     }
 
-    /// The selected sidebar row or pinned tile. Branch-free so view identity is stable and the
-    /// change animates; the row applies its own `.raised` elevation.
+    /// The selected sidebar row or pinned tile. Branch-free on the selection so view identity is
+    /// stable and the change animates; the row applies its own `.raised` elevation.
     func nookRowSelection(_ isSelected: Bool, radius: CGFloat = NookDesign.Radius.md) -> some View {
-        let shape = NookDesign.Radius.shape(radius)
-        return background(shape.fill(isSelected ? NookDesign.Surface.raised : .clear))
-            .overlay(shape.strokeBorder(NookDesign.Surface.hairline.opacity(isSelected ? 1 : 0), lineWidth: NookDesign.Size.hairlineWidth))
+        modifier(RowSelection(isSelected: isSelected, radius: radius))
     }
 
     /// A sidebar chrome control or group: history, sidebar and AI toggles, bottom bar buttons,
