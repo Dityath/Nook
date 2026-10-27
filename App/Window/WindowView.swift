@@ -26,6 +26,8 @@ struct WindowView: View {
     @Environment(\.openSettings) private var openSettings
     @StateObject private var hoverSidebarManager = HoverSidebarManager()
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
         ZStack {
@@ -172,7 +174,7 @@ struct WindowView: View {
         .environmentObject(browserManager.splitManager)
         .environmentObject(hoverSidebarManager)
         .preferredColorScheme(resolvedColorScheme)
-        .nookResolvesGlassMaterial()
+        .environment(\.nookGlassMaterial, glassMaterial)
     }
 
     /// Accent of the space this window shows; nil for private windows, which keep their own look.
@@ -200,8 +202,31 @@ struct WindowView: View {
 
     // MARK: - Layout Components
 
+    /// The chrome's material. Anything but `.legacy` floats the panels over a full-window page;
+    /// Reduce Transparency only turns their glass opaque.
+    private var glassMaterial: GlassMaterial {
+        GlassPolicy.material(
+            supportsGlass: GlassPolicy.osSupportsGlass,
+            reduceTransparency: reduceTransparency,
+            increaseContrast: colorSchemeContrast == .increased)
+    }
+
+    private var panelsFloat: Bool { glassMaterial != .legacy }
+
     @ViewBuilder
     private func WindowBackground() -> some View {
+        if panelsFloat {
+            // The page covers the window; this only shows before a page draws.
+            NookDesign.Surface.windowBackground
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .backgroundDraggable()
+        } else {
+            LegacyWindowBackground()
+        }
+    }
+
+    @ViewBuilder
+    private func LegacyWindowBackground() -> some View {
         // Private windows keep the neutral incognito accent, never the space's color.
         let accent = windowState.isIncognito
             ? SpaceGradient.incognito.primaryColor
@@ -221,6 +246,67 @@ struct WindowView: View {
 
     @ViewBuilder
     private func SidebarWebViewStack() -> some View {
+        if panelsFloat {
+            FloatingPanelsStack()
+        } else {
+            LegacySidebarWebViewStack()
+        }
+    }
+
+    /// macOS 26: the page fills the window and the sidebar and AI panel float over its edges as
+    /// glass. `PanelCoverage` tells each web view how much of it they cover.
+    @ViewBuilder
+    private func FloatingPanelsStack() -> some View {
+        // The page starts at a panel's inner edge: covering the gap beside it too would show
+        // WebKit's under-page colour there as a band next to the glass.
+        let inset = NookDesign.Spacing.panelInset
+        let sidebarOnLeft = nookSettings.sidebarPosition == .left
+        let sidebarCover = windowState.isSidebarVisible ? windowState.sidebarWidth + inset : 0
+        let aiCover = windowState.isSidebarAIChatVisible ? windowState.aiSidebarWidth + inset : 0
+
+        ZStack {
+            WebContent()
+
+            HStack(spacing: 0) {
+                if sidebarOnLeft {
+                    sidebarPanel
+                } else if windowState.isSidebarAIChatVisible {
+                    floatingPanel(AISidebar())
+                }
+                Spacer(minLength: 0)
+                if !sidebarOnLeft {
+                    sidebarPanel
+                } else if windowState.isSidebarAIChatVisible {
+                    floatingPanel(AISidebar())
+                }
+            }
+        }
+        .background(PanelCoverageReporter(
+            left: sidebarOnLeft ? sidebarCover : aiCover,
+            right: sidebarOnLeft ? aiCover : sidebarCover))
+    }
+
+    @ViewBuilder
+    private var sidebarPanel: some View {
+        if windowState.isSidebarVisible {
+            floatingPanel(SpacesSidebar())
+                .transition(.move(edge: nookSettings.sidebarPosition == .left ? .leading : .trailing).combined(with: .opacity))
+        }
+    }
+
+    /// One glass panel. Private windows and the Agent space keep their tint on the glass, so
+    /// neither is mistaken for a regular window.
+    private func floatingPanel<Content: View>(_ content: Content) -> some View {
+        content
+            .background(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(showsAgentSpace ? NookDesign.Surface.agentChromeOpacity : 0))
+            .nookPanelSurface(
+                in: NookDesign.Radius.shape(NookDesign.Radius.panel),
+                tint: windowState.isIncognito ? NookDesign.Surface.privateTint : nil)
+            .padding(NookDesign.Spacing.panelInset)
+    }
+
+    @ViewBuilder
+    private func LegacySidebarWebViewStack() -> some View {
         let aiVisible = windowState.isSidebarAIChatVisible
         let aiAppearsOnTrailingEdge = nookSettings.sidebarPosition == .left
         let sidebarVisible = windowState.isSidebarVisible
@@ -276,7 +362,7 @@ struct WindowView: View {
         }()
         
         let hasTopBar = nookSettings.topBarAddressView
-        let bordered = !nookSettings.hideWebContentBorder
+        let bordered = !nookSettings.hideWebContentBorder && !panelsFloat
 
         ZStack(alignment: .top) {
             VStack(spacing: 0) {

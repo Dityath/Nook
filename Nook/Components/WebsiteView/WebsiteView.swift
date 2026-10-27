@@ -176,10 +176,17 @@ struct WebsiteView: View {
     @State private var isCommandPressed: Bool = false
     @State private var isDropTargeted: Bool = false
     
+    @Environment(\.nookGlassMaterial) private var glassMaterial
+
     private let dragCoordinateSpace = "splitPreview"
 
+    /// The page fills the window under floating panels, so it has no inset card of its own.
+    private var borderless: Bool {
+        nookSettings.hideWebContentBorder || glassMaterial != .legacy
+    }
+
     private var cornerRadius: CGFloat {
-        nookSettings.hideWebContentBorder ? 0 : NookDesign.Radius.md
+        borderless ? 0 : NookDesign.Radius.md
     }
 
     private var webViewClipShape: AnyShape {
@@ -228,7 +235,7 @@ struct WebsiteView: View {
                         .background(
                             webViewClipShape
                                 .fill(shouldShowSplit ? Color.clear : Color(nsColor: .windowBackgroundColor))
-                                .nookElevation(nookSettings.hideWebContentBorder ? .flat : .raised)
+                                .nookElevation(borderless ? .flat : .raised)
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         // Critical: Use allowsHitTesting to prevent SwiftUI from intercepting mouse events

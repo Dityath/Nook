@@ -10,20 +10,22 @@
 import SwiftUI
 
 public extension EnvironmentValues {
-    /// What this window's chrome draws. Set once at the window root by `nookResolvesGlassMaterial()`;
-    /// anything outside a browser window (Settings, the mini window) keeps the old look.
+    /// What this window's chrome draws. Set once at the browser window's root (`WindowView`) from
+    /// `GlassPolicy`; anything outside a browser window (Settings, the mini window) keeps the old look.
     @Entry var nookGlassMaterial: GlassMaterial = .legacy
     /// True for content on a glass panel, so rows and buttons inside it pick their glass variants.
     @Entry var nookOnGlassPanel: Bool = false
 }
 
-public extension View {
-    /// Resolves the window's material from the OS and the accessibility settings. Changing Reduce
-    /// Transparency only swaps materials: the layout and every web view stay where they are.
-    func nookResolvesGlassMaterial() -> some View {
-        modifier(ResolveGlassMaterial())
+public extension GlassPolicy {
+    /// Liquid Glass exists from macOS 26 on.
+    static var osSupportsGlass: Bool {
+        if #available(macOS 26, iOS 26, *) { return true }
+        return false
     }
+}
 
+public extension View {
     /// A floating panel over the page: the sidebar, the AI panel, the hover sidebar. `tint` marks a
     /// window that must not pass for a regular one (private).
     func nookPanelSurface<S: InsettableShape>(in shape: S, tint: Color? = nil) -> some View {
@@ -34,20 +36,6 @@ public extension View {
     /// box. Without glass it is the control fill `nookControlSurface` draws.
     func nookControlGlass<S: InsettableShape>(in shape: S) -> some View {
         modifier(ControlGlass(shape: shape))
-    }
-}
-
-private struct ResolveGlassMaterial: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.colorSchemeContrast) private var contrast
-
-    func body(content: Content) -> some View {
-        let supportsGlass: Bool
-        if #available(macOS 26, iOS 26, *) { supportsGlass = true } else { supportsGlass = false }
-        return content.environment(\.nookGlassMaterial, GlassPolicy.material(
-            supportsGlass: supportsGlass,
-            reduceTransparency: reduceTransparency,
-            increaseContrast: contrast == .increased))
     }
 }
 

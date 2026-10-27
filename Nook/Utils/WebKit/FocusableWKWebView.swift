@@ -111,22 +111,35 @@ final class FocusableWKWebView: WKWebView, SessionWebView {
     }
 
     /// Keeps a mini window page's fixed content clear of the window's glass toolbar while the
-    /// page scrolls underneath it. Synced in `layout()` so it survives resize, full screen and
-    /// toolbar changes; in a browser window the inset stays zero.
+    /// page scrolls underneath it, and a browser window's page clear of the floating glass panels
+    /// (`PanelCoverage`) while WebKit fills the covered strip with the page's background. Synced in
+    /// `layout()` so it survives resize, full screen, toolbar and panel changes.
     override func layout() {
         super.layout()
         guard #available(macOS 26, *) else { return }
-        guard let window = window as? MiniBrowserWindow, bounds.height > 0 else {
-            if obscuredContentInsets.top != 0 { obscuredContentInsets = NSEdgeInsetsZero }
-            return
+        let insets = coveredInsets()
+        if insets.top != obscuredContentInsets.top || insets.left != obscuredContentInsets.left
+            || insets.right != obscuredContentInsets.right {
+            obscuredContentInsets = insets
         }
-        // How far this view reaches up under the titlebar and toolbar. WebKit throws on
-        // negative insets or insets taller than the view, both possible mid-layout.
-        let overlap = convert(bounds, to: nil).maxY - window.contentLayoutRect.maxY
-        let inset = min(max(0, overlap), bounds.height - 1)
-        if obscuredContentInsets.top != inset {
-            obscuredContentInsets = NSEdgeInsets(top: inset, left: 0, bottom: 0, right: 0)
+    }
+
+    private func coveredInsets() -> NSEdgeInsets {
+        // WebKit throws on negative insets or insets as large as the view, both possible mid-layout.
+        guard let window, bounds.height > 1, bounds.width > 1 else { return NSEdgeInsetsZero }
+        let frame = convert(bounds, to: nil)
+        if let window = window as? MiniBrowserWindow {
+            // How far this view reaches up under the titlebar and toolbar.
+            let overlap = frame.maxY - window.contentLayoutRect.maxY
+            return NSEdgeInsets(top: min(max(0, overlap), bounds.height - 1), left: 0, bottom: 0, right: 0)
         }
+        // Peek draws above the panels, and an agent page is parked off screen.
+        guard let session = owningSession, !session.isDetached, !session.isAgentPage,
+              let contentWidth = window.contentView?.bounds.width else { return NSEdgeInsetsZero }
+        let edges = PanelCoverage.edges(for: window)
+        let left = min(max(0, edges.left - frame.minX), bounds.width - 1)
+        let right = min(max(0, frame.maxX - (contentWidth - edges.right)), bounds.width - 1 - left)
+        return NSEdgeInsets(top: 0, left: left, bottom: 0, right: right)
     }
 
     /// Set when sidebar PiP asks to isolate the page; undone when the view next lands in a tab.

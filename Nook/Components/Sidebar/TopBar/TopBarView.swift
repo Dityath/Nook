@@ -24,11 +24,12 @@ struct TopBarView: View {
     @Environment(BrowserWindowState.self) private var windowState
     @Environment(CommandPalette.self) private var commandPalette
     @Environment(\.nookSettings) var nookSettings
+    @Environment(\.nookGlassMaterial) private var glassMaterial
     @State private var isHovering: Bool = false
     @State private var previousTabId: UUID? = nil
 
     var body: some View {
-        let cornerRadius: CGFloat = nookSettings.hideWebContentBorder ? 0 : NookDesign.Radius.md
+        let cornerRadius: CGFloat = nookSettings.hideWebContentBorder || glassMaterial != .legacy ? 0 : NookDesign.Radius.md
 
         ZStack {
             // Main content
