@@ -383,10 +383,16 @@ struct SpacesSideBarView: View {
     private var titleRow: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            if !nookSettings.topBarAddressView {
+            if !nookSettings.topBarAddressView && nookSettings.showNavigationButtons {
                 SidebarHistoryButtons()
                     .environmentObject(browserManager)
                     .environment(windowState)
+            }
+            if nookSettings.aiButtonInTitleRow {
+                Button("Toggle AI Assistant", systemImage: "sparkle") {
+                    browserManager.toggleAISidebar(for: windowState)
+                }
+                .nookIconButtons(glass: true)
             }
         }
     }

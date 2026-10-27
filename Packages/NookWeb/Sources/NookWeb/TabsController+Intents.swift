@@ -34,6 +34,7 @@ extension TabsController {
             try $0.createTab(id: id, url: url, title: title ?? url.host ?? url.absoluteString, in: position.0, after: position.1)
         }
         guard created != nil else { return nil }
+        consumeRowMotion(id, force: opener != nil)
         if opener != nil { revealTrail(position.0) }
         if placement != .background { select(id, in: window) }
         return id
@@ -155,6 +156,7 @@ extension TabsController {
         guard perform(owner(of: window), "popup", {
             try $0.createTab(id: id, url: pageURL, title: "New Tab", in: position.0, after: position.1)
         }) != nil else { return nil }
+        consumeRowMotion(id, force: true)
         revealTrail(position.0)
         let session = PageSession(
             itemID: id, url: pageURL, title: "New Tab", isPrivate: window.privateTree != nil,
@@ -307,6 +309,7 @@ extension TabsController {
     /// and any folder, is removed into the reopen history.
     public func close(_ itemID: UUID) {
         guard let owner = owner(ofItem: itemID) else { return }
+        consumeRowMotion(itemID)
         let source = tree(owner)
         guard let item = source.item(itemID) else { return }
         if !item.isFolder, source.scope(of: itemID) == .synced {
@@ -335,6 +338,7 @@ extension TabsController {
     /// Deletes an item and its subtree from the sidebar, pinned tabs and favorites included.
     /// Pages end; reopening the closed entry puts it back in its place.
     public func remove(_ itemID: UUID) {
+        consumeRowMotion(itemID)
         remove(itemID, promotingChildren: false)
     }
 
@@ -361,11 +365,14 @@ extension TabsController {
     }
 
     public func close(_ itemIDs: [UUID]) {
+        clearRowMotion()
         for id in itemIDs { close(id) }
     }
 
+    /// Cmd+W: one tab, closed by the person, so its row animates out.
     public func closeSelected(in window: BrowserWindowState) {
         guard let selected = window.selectedItemID else { return }
+        markNextRowAnimated()
         close(selected)
     }
 
@@ -408,6 +415,7 @@ extension TabsController {
             dropLastClosed()
         }
         let restored = entry.items.map(\.id)
+        if let root = restored.first { consumeRowMotion(root, force: true) }
         // Older entries for the same items (a page close, then a delete) must not restore them twice.
         if !isPrivate { dropClosed(containing: Set(restored)) }
         for host in entry.items where host.isFolder || entry.items.contains(where: { $0.parent == .folder(itemID: host.id) }) {

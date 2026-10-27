@@ -45,6 +45,8 @@ public final class NookSettingsService {
     private let webSearchContextSizeKey = "settings.webSearchContextSize"
     private let showLinkStatusBarKey = "settings.showLinkStatusBar"
     private let favoritePreviewsKey = "settings.favoritePreviews"
+    private let showNavigationButtonsKey = "settings.showNavigationButtons"
+    private let showSpaceNameKey = "settings.showSpaceName"
     private let searchPageTextInHistoryKey = "settings.searchPageTextInHistory"
     private let hideWebContentBorderKey = "settings.hideWebContentBorder"
     private let siteSearchEntriesKey = "settings.siteSearchEntries"
@@ -336,6 +338,22 @@ public final class NookSettingsService {
         }
     }
 
+    /// Back, forward, reload and the sidebar toggle in the title row. Off, the shortcuts, gestures
+    /// and menu items still do the same.
+    public var showNavigationButtons: Bool {
+        didSet {
+            userDefaults.set(showNavigationButtons, forKey: showNavigationButtonsKey)
+        }
+    }
+
+    /// The space's name, and the space menu it opens, at the trailing end of the title row.
+    /// Off, spaces are still switched with the dots and the space menus elsewhere.
+    public var showSpaceName: Bool {
+        didSet {
+            userDefaults.set(showSpaceName, forKey: showSpaceNameKey)
+        }
+    }
+
     /// Keep visited pages' text so the command palette can find them by their words.
     public var searchPageTextInHistory: Bool {
         didSet {
@@ -480,6 +498,8 @@ public final class NookSettingsService {
             webSearchContextSizeKey: "medium",
             showLinkStatusBarKey: true,
             favoritePreviewsKey: true,
+            showNavigationButtonsKey: true,
+            showSpaceNameKey: true,
             searchPageTextInHistoryKey: true,
             hideWebContentBorderKey: false,
             didFinishOnboardingKey: false,
@@ -585,6 +605,8 @@ public final class NookSettingsService {
         self.webSearchContextSize = userDefaults.string(forKey: webSearchContextSizeKey) ?? "medium"
         self.showLinkStatusBar = userDefaults.bool(forKey: showLinkStatusBarKey)
         self.favoritePreviews = userDefaults.bool(forKey: favoritePreviewsKey)
+        self.showNavigationButtons = userDefaults.bool(forKey: showNavigationButtonsKey)
+        self.showSpaceName = userDefaults.bool(forKey: showSpaceNameKey)
         self.searchPageTextInHistory = userDefaults.bool(forKey: searchPageTextInHistoryKey)
         self.hideWebContentBorder = userDefaults.bool(forKey: hideWebContentBorderKey)
         self.tabLayout = TabLayout(rawValue: userDefaults.string(forKey: tabLayoutKey) ?? TabLayout.sidebar.rawValue) ?? .sidebar

@@ -53,6 +53,7 @@ struct SidebarAIChat: View {
     @Environment(\.nookSettings) var nookSettings
     @Environment(AIService.self) var aiService
     @Environment(AIConfigService.self) var configService
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
 
     @State private var messageText: String = ""
     @State private var showAddModelPopover: Bool = false
@@ -165,7 +166,7 @@ struct SidebarAIChat: View {
                     }
                 }
             }
-            .nookIconButtons()
+            .nookIconButtons(glass: true)
         }
         .padding(.horizontal, 8)
     }
@@ -195,9 +196,18 @@ struct SidebarAIChat: View {
                 Spacer()
 
                 Button(action: sendMessage) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(NookDesign.Font.titleLarge)
-                        .foregroundStyle(messageText.isEmpty ? HierarchicalShapeStyle.tertiary : .primary)
+                    // On glass the send button is a glass square like the other chrome buttons.
+                    if onGlassPanel {
+                        Image(systemName: "arrow.up")
+                            .font(NookDesign.Font.label)
+                            .foregroundStyle(messageText.isEmpty ? HierarchicalShapeStyle.tertiary : .primary)
+                            .frame(width: NookDesign.Size.iconButton, height: NookDesign.Size.iconButton)
+                            .nookControlGlass(in: NookDesign.Radius.shape(NookDesign.Radius.md))
+                    } else {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(NookDesign.Font.titleLarge)
+                            .foregroundStyle(messageText.isEmpty ? HierarchicalShapeStyle.tertiary : .primary)
+                    }
                 }
                 .buttonStyle(.plain)
                 .disabled(messageText.isEmpty || aiService.isLoading || !aiService.hasApiKey)
@@ -205,7 +215,7 @@ struct SidebarAIChat: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .nookControlSurface(in: NookDesign.Radius.shape(NookDesign.Radius.lg))
+        .nookPanelControl(glass: NookDesign.Radius.shape(NookDesign.Radius.xl), else: NookDesign.Radius.shape(NookDesign.Radius.lg))
         .padding(.horizontal, 8)
     }
 

@@ -176,10 +176,14 @@ struct WebsiteView: View {
     @State private var isCommandPressed: Bool = false
     @State private var isDropTargeted: Bool = false
     
+    @Environment(\.nookGlassMaterial) private var glassMaterial
+
     private let dragCoordinateSpace = "splitPreview"
 
+    /// On macOS 26 the card's corners follow the window's, 8pt in.
     private var cornerRadius: CGFloat {
-        nookSettings.hideWebContentBorder ? 0 : NookDesign.Radius.md
+        if nookSettings.hideWebContentBorder { return 0 }
+        return glassMaterial == .legacy ? NookDesign.Radius.md : NookDesign.Radius.windowInset
     }
 
     private var webViewClipShape: AnyShape {
@@ -274,6 +278,8 @@ struct WebsiteView: View {
                 BlockedPageView(session: session)
             }
 
+            swipeBubbles
+
             // The unselected split pane can be translated from its context menu too.
             if shouldShowSplit, let other = [splitManager.leftTabId(for: windowState.id), splitManager.rightTabId(for: windowState.id)]
                 .compactMap({ $0 }).first(where: { $0 != windowState.selectedItemID }),
@@ -310,6 +316,25 @@ struct WebsiteView: View {
                 AgentFrame(shape: webViewClipShape, busy: browserManager.tabs.agentCallsInFlight > 0)
             }
         }
+    }
+
+    /// The two-finger swipe bubble, at the edge of the page or split pane being swiped.
+    private var swipeBubbles: some View {
+        GeometryReader { proxy in
+            if shouldShowSplit {
+                let leftWidth = proxy.size.width * splitManager.dividerFraction(for: windowState.id)
+                if let id = splitManager.leftTabId(for: windowState.id), let session = browserManager.tabs.session(for: id) {
+                    SwipeBubbleOverlay(session: session, rect: CGRect(x: 0, y: 0, width: leftWidth, height: proxy.size.height))
+                }
+                if let id = splitManager.rightTabId(for: windowState.id), let session = browserManager.tabs.session(for: id) {
+                    SwipeBubbleOverlay(session: session, rect: CGRect(
+                        x: leftWidth, y: 0, width: proxy.size.width - leftWidth, height: proxy.size.height))
+                }
+            } else if let session = browserManager.tabs.controllableSession(in: windowState) {
+                SwipeBubbleOverlay(session: session)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
 }

@@ -495,6 +495,7 @@ struct CommandPaletteView: View {
                 let template = browserManager.nookSettings?.resolvedSearchEngineTemplate ?? SearchProvider.google.queryTemplate
                 let resolved = normalizeURL(suggestion.text, queryTemplate: template)
                 if let url = URL(string: resolved) {
+                    browserManager.tabs.markNextRowAnimated()
                     browserManager.tabs.open(url: url, in: windowState, placement: .newTab)
                 }
             }
@@ -509,6 +510,7 @@ struct CommandPaletteView: View {
     /// Loads `url` in the selected page when the palette was opened to navigate it, else in a new tab.
     private func open(_ url: URL) {
         let navigateCurrent = commandPalette.shouldNavigateCurrentTab && windowState.selectedItemID != nil
+        if !navigateCurrent { browserManager.tabs.markNextRowAnimated() }
         browserManager.tabs.open(url: url, in: windowState, placement: navigateCurrent ? .replaceCurrent : .newTab)
     }
 

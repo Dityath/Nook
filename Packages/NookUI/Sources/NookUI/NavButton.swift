@@ -14,21 +14,34 @@ import NookDesign
 /// Pass size: or radius: only where a call site needs a non-default (media controls 24, URL bar and space title 28, space switcher radius lg).
 public struct NookIconButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
     @State private var isHovering = false
 
     let size: CGFloat
     let radius: CGFloat
+    /// A panel's own chrome button (title row, bottom bar, AI header): a glass rounded square on a
+    /// glass sidebar. Buttons inside rows, cards and fields never take glass.
+    let glass: Bool
 
-    public init(size: CGFloat = NookDesign.Size.iconButton, radius: CGFloat = NookDesign.Radius.md) {
+    public init(size: CGFloat = NookDesign.Size.iconButton, radius: CGFloat = NookDesign.Radius.md, glass: Bool = false) {
         self.size = size
         self.radius = radius
+        self.glass = glass
     }
 
     public func makeBody(configuration: Configuration) -> some View {
         ZStack {
-            NookDesign.Radius.shape(radius)
-                .fill(fill(isPressed: configuration.isPressed))
-                .frame(width: size, height: size)
+            // A chrome button on glass is a glass rounded square; elsewhere a fill shows on hover.
+            if glass && onGlassPanel {
+                NookDesign.Radius.shape(radius)
+                    .fill(.clear)
+                    .frame(width: size, height: size)
+                    .nookControlGlass(in: NookDesign.Radius.shape(radius))
+            } else {
+                NookDesign.Radius.shape(radius)
+                    .fill(fill(isPressed: configuration.isPressed))
+                    .frame(width: size, height: size)
+            }
             configuration.label
                 .foregroundStyle(.primary)
         }
@@ -51,9 +64,10 @@ public struct NookIconButtonStyle: ButtonStyle {
 
 public extension View {
     /// Standalone icon buttons, Nook's one button look: no container, a fill only on hover.
-    func nookIconButtons() -> some View {
+    /// `glass` marks a panel's chrome buttons, which are glass circles on a glass panel.
+    func nookIconButtons(glass: Bool = false) -> some View {
         labelStyle(.iconOnly)
-            .buttonStyle(NookIconButtonStyle())
+            .buttonStyle(NookIconButtonStyle(glass: glass))
             .foregroundStyle(.primary)
     }
 }

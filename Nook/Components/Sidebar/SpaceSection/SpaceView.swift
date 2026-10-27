@@ -27,6 +27,7 @@ struct SpaceView: View {
     @Environment(CommandPalette.self) private var commandPalette
     @Environment(TabOrganizerManager.self) private var tabOrganizerManager
     @Environment(\.nookSettings) private var nookSettings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var dragSession = NookDragSessionManager.shared
     @State private var isNewTabHovering = false
 
@@ -97,6 +98,7 @@ struct SpaceView: View {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                         rowView(row, zone: zone, split: split, isDropTarget: position == DropPosition(zone: zone, index: index, placement: .into))
                             .padding(.leading, CGFloat(row.depth) * NookDesign.Spacing.folderIndent)
+                            .transition(rowTransition(for: row.id))
                             // The line is indented to the level the drop lands at (dropDepth), so a
                             // line that puts the item inside a folder is always drawn inside it.
                             .overlay(alignment: .top) {
@@ -114,6 +116,8 @@ struct SpaceView: View {
                             }
                     }
                 }
+                // Only the tab the person just opened or closed springs; see TabsController.animatedRowID.
+                .animation(reduceMotion ? NookDesign.Motion.standard : NookDesign.Motion.tabSpring, value: tabs.rowMotionTick)
 
                 if allRows.isEmpty, !showsTail {
                     emptySectionSlot(isActive: dragSession.activeZone == zone)
@@ -138,6 +142,22 @@ struct SpaceView: View {
             }
         }
     }
+
+    /// A tab the person opened grows in from slightly small; any other new row fades. Every row
+    /// shrinks away: a removed row keeps the transition of its last render, before
+    /// `animatedRowID` named it, and a removal outside an animated change shows no transition.
+    private func rowTransition(for id: UUID) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: id == tabs.animatedRowID
+                ? .scale(scale: Self.insertScale, anchor: .top).combined(with: .opacity)
+                : .opacity,
+            removal: .scale(scale: Self.removalScale).combined(with: .opacity))
+    }
+
+    /// Scale a springing new row starts from, and one leaving shrinks to.
+    private static let insertScale: CGFloat = 0.92
+    private static let removalScale: CGFloat = 0.85
 
     private func emptySectionSlot(isActive: Bool) -> some View {
         NookDesign.Radius.shape(NookDesign.Radius.md)
@@ -229,6 +249,7 @@ struct SpaceView: View {
 
     private var newTabButton: some View {
         Button {
+            Haptics.tap()
             commandPalette.open()
         } label: {
             HStack(spacing: NookDesign.Spacing.md) {

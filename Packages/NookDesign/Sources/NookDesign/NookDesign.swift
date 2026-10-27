@@ -26,6 +26,7 @@ public enum NookDesign {
         public static let lg: CGFloat = 12     // essentials tile, card, settings group
         public static let xl: CGFloat = 16     // dialog, toast
         public static let xxl: CGFloat = 24    // command palette
+        public static let windowInset: CGFloat = 18  // macOS 26: a card 8pt inside the window's 26pt corner (page card, hover sidebar), so the two curves run parallel
 
         public static func shape(_ radius: CGFloat) -> RoundedRectangle {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -93,6 +94,8 @@ public enum NookDesign {
         public static let pipSkip: CGFloat = 48        // PiP skip buttons, as in the system PiP window
         public static let pipPlay: CGFloat = 64        // PiP play/pause, as in the system PiP window
         public static let pipScrub: CGFloat = 4        // PiP scrubber track
+        public static let swipeBubble: CGFloat = 52    // the glass bubble a two-finger swipe back or forward pulls in
+        public static let swipeRing: CGFloat = 2.5     // its progress ring's stroke
         // Narrowest sidebar: the lights (88), the history pill (110), the inset (8).
         public static let sidebarMin: CGFloat = 206
 
@@ -140,6 +143,7 @@ public enum NookDesign {
         public static let flight = Animation.easeIn(duration: 0.6)       // a download flying from the page to its button
         public static let spring = Animation.snappy(duration: 0.3)      // palette, dialog, toast, drag reorder, gesture-tracked motion
         public static let pageSettle = Animation.spring(response: 0.25, dampingFraction: 1)  // the space pager's settle, so the dots land with the pages
+        public static let tabSpring = Animation.spring(response: 0.35, dampingFraction: 0.72)  // a tab row the person opened springs in, with a visible overshoot
     }
 
     // MARK: - Surface
@@ -150,6 +154,9 @@ public enum NookDesign {
         public static let tintOpacity: Double = 0.18                       // accent-tinted control: chosen chip, own chat message
         public static let mediaScrim = Color.black.opacity(0.35)           // controls over video
         public static let hairline = Color.primary.opacity(0.08)
+        public static let glassRowSelected = Color.primary.opacity(0.12)   // selected row on a glass panel
+        public static let glassRowHover = Color.primary.opacity(0.06)      // hovered row on a glass panel
+        public static let inactivePanelDim = Color.black.opacity(0.08)     // glass panel in an inactive window
         public static let unloadedOpacity: Double = 0.55
         public static let dropBorderIdle = Color.secondary.opacity(0.3)    // dashed empty-state drop target
         public static let dropBorderActive = Color.primary.opacity(0.4)    // dashed drop target while dragging
@@ -228,9 +235,12 @@ public enum NookDesign {
 
 private struct NookElevationModifier: ViewModifier {
     let level: NookDesign.Elevation
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
 
     func body(content: Content) -> some View {
-        content
+        // A row on a glass panel is selected by a soft fill; a shadow under it reads as a smudge.
+        let level = onGlassPanel && self.level == .raised ? .flat : self.level
+        return content
             .shadow(color: .black.opacity(level == .floating ? 0.16 : 0), radius: level == .floating ? 32 : 0, y: level == .floating ? 12 : 0)
             // Raised only. A 2pt shadow hugs the shape and reads as a dark stroke, which a
             // floating card does not want: `nookFloatingSurface` draws its own hairline.

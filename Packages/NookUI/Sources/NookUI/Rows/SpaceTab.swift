@@ -19,6 +19,7 @@ public struct SpaceTab: View {
     var hasChildren = false
 
     @State private var isHovering: Bool = false
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
     @State private var isCloseHovering: Bool = false
     @State private var isResetHovering: Bool = false
     @State private var draftName: String = ""
@@ -153,7 +154,13 @@ public struct SpaceTab: View {
                         // tabs section: "x" closes.
                         let useUnload = tabs.isSynced(item.id) && !isUnloaded
                         Button(action: {
-                            if useUnload { tabs.unload(item.id) } else { tabs.remove(item.id) }
+                            if useUnload {
+                                tabs.unload(item.id)
+                            } else {
+                                Haptics.tap()
+                                tabs.markNextRowAnimated()
+                                tabs.remove(item.id)
+                            }
                         }) {
                             Image(systemName: useUnload ? "minus" : "xmark")
                                 .font(NookDesign.Font.secondary)
@@ -225,7 +232,7 @@ public struct SpaceTab: View {
         if isCurrentTab {
             return Color.clear
         } else if isHovering {
-            return NookDesign.Surface.fill
+            return onGlassPanel ? NookDesign.Surface.glassRowHover : NookDesign.Surface.fill
         } else {
             return Color.clear
         }

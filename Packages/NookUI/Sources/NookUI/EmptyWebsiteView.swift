@@ -15,6 +15,7 @@ public struct EmptyWebsiteView: View {
     @Environment(BrowserWindowState.self) private var windowState
     @Environment(WindowRegistry.self) var windowRegistry
     @Environment(\.tabActions) private var actions
+    @Environment(\.nookGlassMaterial) private var glassMaterial
 
     public init() {}
 
@@ -25,20 +26,24 @@ public struct EmptyWebsiteView: View {
                 let accent = windowState.isIncognito ? NookDesign.Surface.incognitoAccent : (actions?.accentColor ?? .accentColor)
                 let isActive = windowRegistry.activeWindowId == windowState.id
 
-                NookDesign.Surface.containerGradient(accent: accent, isActive: isActive)
-                    .clipShape(NookDesign.Radius.shape(NookDesign.Radius.lg))
-                    .nookElevation(.raised)
-                    .animation(NookDesign.Motion.standard, value: isActive)
+                // On macOS 26 there is no card: the window's see-through background shows, as
+                // beside the sidebar.
+                if glassMaterial == .legacy {
+                    NookDesign.Surface.containerGradient(accent: accent, isActive: isActive)
+                        .clipShape(NookDesign.Radius.shape(NookDesign.Radius.lg))
+                        .nookElevation(.raised)
+                        .animation(NookDesign.Motion.standard, value: isActive)
+                }
 
+                // The moon and the words share one colour.
                 VStack(spacing: 16) {
                     Image(systemName: "moon.stars")
                         .font(NookDesign.Font.display)
-                        .blendMode(.overlay)
 
                     Text("Ah, peace.")
                         .font(NookDesign.Font.title)
-                        .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.6))
                 }
+                .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

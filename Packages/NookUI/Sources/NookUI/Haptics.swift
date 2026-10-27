@@ -22,4 +22,14 @@ public enum Haptics {
         UISelectionFeedbackGenerator().selectionChanged()
         #endif
     }
+
+    /// A light tap for a tab the person opened or closed from the sidebar. On a Mac it is felt
+    /// only with a finger on the trackpad.
+    @MainActor public static func tap() {
+        #if os(macOS)
+        NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+        #else
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
+    }
 }

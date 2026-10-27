@@ -34,7 +34,7 @@ struct SidebarHistoryButtons: View {
                     .contentTransition(.symbolEffect(.replace))
             }
         }
-        .nookIconButtons()
+        .nookIconButtons(glass: true)
     }
 
     /// Nil while another window holds the page: its controls stay inert until Move Here.

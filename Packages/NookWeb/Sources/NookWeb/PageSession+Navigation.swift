@@ -50,6 +50,9 @@ extension PageSession: WKNavigationDelegate {
     ) {
         loadingState = .didCommit
         pdfLoadStateChanged(webView)
+        #if os(macOS)
+        fadeInAfterSwipe(webView)
+        #endif
         if let capture = devCapture {
             capture.reset()
             if let url = webView.url, controller?.blocker.isEnabled == true {

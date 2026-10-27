@@ -18,8 +18,8 @@ struct SidebarHoverOverlayView: View {
     @Environment(BrowserWindowState.self) private var windowState
     @Environment(CommandPalette.self) private var commandPalette
     @Environment(\.nookSettings) var nookSettings
+    @Environment(\.nookGlassMaterial) private var glassMaterial
 
-    private let cornerRadius: CGFloat = NookDesign.Radius.lg
     private let horizontalInset: CGFloat = NookDesign.Spacing.md
     private let verticalInset: CGFloat = NookDesign.Spacing.md
 
@@ -48,8 +48,11 @@ struct SidebarHoverOverlayView: View {
                         .environment(commandPalette)
                         .environmentObject(browserManager.gradientColorManager)
                         .frame(maxHeight: .infinity)
-                        .background(sidebarBackground)
-                        .nookFloatingSurface(in: NookDesign.Radius.shape(cornerRadius))
+                        .modifier(OverlaySurface(
+                            material: glassMaterial,
+                            legacyBackground: sidebarBackground,
+                            agentChrome: isAgentSpace,
+                            isIncognito: windowState.isIncognito))
                         .alwaysArrowCursor()
                         .padding(nookSettings.sidebarPosition == .left ? .leading : .trailing, horizontalInset)
                         .padding(.vertical, verticalInset)
@@ -64,12 +67,38 @@ struct SidebarHoverOverlayView: View {
         }
     }
 
+    private var isAgentSpace: Bool {
+        windowState.spaceID != nil && windowState.spaceID == browserManager.tabs.agentSpaceID
+    }
+
     /// The docked sidebar's own background, so the overlay reads as the same sidebar.
     private var sidebarBackground: some View {
         let accent = windowState.isIncognito ? SpaceGradient.incognito.primaryColor : browserManager.gradientColorManager.accentColor
-        let isAgent = windowState.spaceID != nil && windowState.spaceID == browserManager.tabs.agentSpaceID
         return NookDesign.Surface.containerGradient(accent: accent, isActive: true)
             .overlay(windowState.isIncognito ? NookDesign.Surface.privateTint : Color.clear)
-            .overlay(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(isAgent ? NookDesign.Surface.agentChromeOpacity : 0))
+            .overlay(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(isAgentSpace ? NookDesign.Surface.agentChromeOpacity : 0))
+    }
+}
+
+/// Before macOS 26 the overlay is a card wearing the sidebar's gradient; from 26 on it is the same
+/// glass panel the docked sidebar floats in.
+private struct OverlaySurface<Legacy: View>: ViewModifier {
+    let material: GlassMaterial
+    let legacyBackground: Legacy
+    let agentChrome: Bool
+    let isIncognito: Bool
+
+    func body(content: Content) -> some View {
+        if material == .legacy {
+            content
+                .background(legacyBackground)
+                .nookFloatingSurface(in: NookDesign.Radius.shape(NookDesign.Radius.lg))
+        } else {
+            content
+                .background(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(agentChrome ? NookDesign.Surface.agentChromeOpacity : 0))
+                .nookPanelSurface(
+                    in: NookDesign.Radius.shape(NookDesign.Radius.windowInset),
+                    tint: isIncognito ? NookDesign.Surface.privateTint : nil)
+        }
     }
 }

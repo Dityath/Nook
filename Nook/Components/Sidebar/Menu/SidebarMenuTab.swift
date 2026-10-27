@@ -39,7 +39,8 @@ struct SidebarMenuTab: View {
         VStack(spacing: NookDesign.Spacing.md) {
             Image(systemName: isActive ? activeImage : image)
                 .font(NookDesign.Font.titleLarge)
-                .foregroundStyle(isActive ? .green : .primary)
+                // One soft colour for every tab; the chosen one is marked by its surface.
+                .foregroundStyle(.secondary)
                 .symbolRenderingMode(.hierarchical)
                 .symbolEffect(.wiggle, value: shouldWiggle)
                 .contentTransition(.symbolEffect(.replace.magic(fallback: .downUp.byLayer), options: .nonRepeating))

@@ -26,6 +26,8 @@ struct WindowView: View {
     @Environment(\.openSettings) private var openSettings
     @StateObject private var hoverSidebarManager = HoverSidebarManager()
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
         ZStack {
@@ -172,6 +174,7 @@ struct WindowView: View {
         .environmentObject(browserManager.splitManager)
         .environmentObject(hoverSidebarManager)
         .preferredColorScheme(resolvedColorScheme)
+        .environment(\.nookGlassMaterial, glassMaterial)
     }
 
     /// Accent of the space this window shows; nil for private windows, which keep their own look.
@@ -199,8 +202,34 @@ struct WindowView: View {
 
     // MARK: - Layout Components
 
+    /// The chrome's material: `.legacy` before macOS 26, else glass (opaque under Reduce
+    /// Transparency, which the behind-window material follows on its own).
+    private var glassMaterial: GlassMaterial {
+        GlassPolicy.material(
+            supportsGlass: GlassPolicy.osSupportsGlass,
+            reduceTransparency: reduceTransparency,
+            increaseContrast: colorSchemeContrast == .increased)
+    }
+
     @ViewBuilder
     private func WindowBackground() -> some View {
+        if glassMaterial == .legacy {
+            LegacyWindowBackground()
+        } else {
+            // Behind the docked sidebar, the AI panel and the page's border: the desktop and the
+            // windows behind Nook, frosted, as a Finder sidebar shows them. The space's colour
+            // stays in the space dots; private windows and the Agent space keep their tint.
+            BehindWindowMaterial()
+                .overlay(windowState.isIncognito ? NookDesign.Surface.privateTint : Color.clear)
+                .overlay(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(showsAgentSpace ? NookDesign.Surface.agentChromeOpacity : 0))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .backgroundDraggable()
+                .environment(windowState)
+        }
+    }
+
+    @ViewBuilder
+    private func LegacyWindowBackground() -> some View {
         // Private windows keep the neutral incognito accent, never the space's color.
         let accent = windowState.isIncognito
             ? SpaceGradient.incognito.primaryColor
@@ -252,6 +281,8 @@ struct WindowView: View {
     private func SpacesSidebar() -> some View {
         if windowState.isSidebarVisible {
             SpacesSideBarView()
+                // On the behind-window glass: chrome buttons and fields take the glass look.
+                .environment(\.nookOnGlassPanel, glassMaterial == .glass)
                 .frame(width: windowState.sidebarWidth)
                 .overlay(alignment: nookSettings.sidebarPosition == .left ? .trailing : .leading) {
                     SidebarResizeView()
@@ -270,9 +301,7 @@ struct WindowView: View {
 
     @ViewBuilder
     private func WebContent() -> some View {
-        let cornerRadius: CGFloat = {
-            return 8
-        }()
+        let cornerRadius: CGFloat = glassMaterial == .legacy ? NookDesign.Radius.md : NookDesign.Radius.windowInset
         
         let hasTopBar = nookSettings.topBarAddressView
         let bordered = !nookSettings.hideWebContentBorder
@@ -335,6 +364,7 @@ struct WindowView: View {
         let handleAlignment: Alignment = nookSettings.sidebarPosition == .left ? .leading : .trailing
         
         DevPanelColumn()
+            .environment(\.nookOnGlassPanel, glassMaterial == .glass)
             .frame(width: windowState.aiSidebarWidth)
             .overlay(alignment: handleAlignment) {
                 AISidebarResizeView()

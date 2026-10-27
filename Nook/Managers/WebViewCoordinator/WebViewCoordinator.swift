@@ -118,7 +118,8 @@ class WebViewCoordinator {
         let newWebView = FocusableWKWebView(frame: .zero, configuration: configuration)
         newWebView.navigationDelegate = session
         newWebView.uiDelegate = session
-        newWebView.allowsBackForwardNavigationGestures = true
+        // Nook tracks two-finger swipes itself (PageSession+SwipeBack+macOS.swift).
+        newWebView.allowsBackForwardNavigationGestures = false
         newWebView.allowsMagnification = true
         newWebView.owningSession = session
         newWebView.contextMenuBridge = WebContextMenuBridge(session: session, configuration: configuration)
