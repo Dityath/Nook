@@ -14,6 +14,7 @@ import NookDesign
 /// Pass size: or radius: only where a call site needs a non-default (media controls 24, URL bar and space title 28, space switcher radius lg).
 public struct NookIconButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
     @State private var isHovering = false
 
     let size: CGFloat
@@ -26,9 +27,17 @@ public struct NookIconButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         ZStack {
-            NookDesign.Radius.shape(radius)
-                .fill(fill(isPressed: configuration.isPressed))
-                .frame(width: size, height: size)
+            // On a glass panel every icon button is a glass circle; elsewhere a fill shows on hover.
+            if onGlassPanel {
+                Circle()
+                    .fill(.clear)
+                    .frame(width: size, height: size)
+                    .nookControlGlass(in: Circle())
+            } else {
+                NookDesign.Radius.shape(radius)
+                    .fill(fill(isPressed: configuration.isPressed))
+                    .frame(width: size, height: size)
+            }
             configuration.label
                 .foregroundStyle(.primary)
         }

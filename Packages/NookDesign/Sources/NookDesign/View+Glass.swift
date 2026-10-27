@@ -37,6 +37,26 @@ public extension View {
     func nookControlGlass<S: InsettableShape>(in shape: S) -> some View {
         modifier(ControlGlass(shape: shape))
     }
+
+    /// A field-like control (URL bar, chat box): a glass `glassShape` on a glass panel, otherwise
+    /// the `nookControlSurface` fill in `shape`, clipped to whichever it draws.
+    func nookPanelControl<G: InsettableShape, S: InsettableShape>(glass glassShape: G, else shape: S) -> some View {
+        modifier(PanelControl(glassShape: glassShape, shape: shape))
+    }
+}
+
+private struct PanelControl<G: InsettableShape, S: InsettableShape>: ViewModifier {
+    let glassShape: G
+    let shape: S
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
+
+    func body(content: Content) -> some View {
+        if onGlassPanel {
+            content.clipShape(glassShape).nookControlGlass(in: glassShape)
+        } else {
+            content.clipShape(shape).background(shape.fill(NookDesign.Surface.fill))
+        }
+    }
 }
 
 private struct PanelSurface<S: InsettableShape>: ViewModifier {

@@ -233,9 +233,12 @@ public enum NookDesign {
 
 private struct NookElevationModifier: ViewModifier {
     let level: NookDesign.Elevation
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
 
     func body(content: Content) -> some View {
-        content
+        // A row on a glass panel is selected by a soft fill; a shadow under it reads as a smudge.
+        let level = onGlassPanel && self.level == .raised ? .flat : self.level
+        return content
             .shadow(color: .black.opacity(level == .floating ? 0.16 : 0), radius: level == .floating ? 32 : 0, y: level == .floating ? 12 : 0)
             // Raised only. A 2pt shadow hugs the shape and reads as a dark stroke, which a
             // floating card does not want: `nookFloatingSurface` draws its own hairline.

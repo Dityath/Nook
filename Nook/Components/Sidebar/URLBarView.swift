@@ -116,8 +116,7 @@ struct URLBarView: View {
         .overlay(alignment: .bottom) {
             PageLoadingProgressBar(session: session)
         }
-        .clipShape(NookDesign.Radius.shape(NookDesign.Radius.md))
-        .nookControlSurface(in: NookDesign.Radius.shape(NookDesign.Radius.md))
+        .nookPanelControl(glass: Capsule(), else: NookDesign.Radius.shape(NookDesign.Radius.md))
         // Report the frame in the window space so we can overlay the mini palette above all content
         .background(
             GeometryReader { proxy in

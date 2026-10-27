@@ -21,6 +21,7 @@ public struct PinnedTabView<Icon: View>: View {
     var action: () -> Void
 
     @State private var isHovered: Bool = false
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
 
     public init(
         tabName: String,
@@ -72,6 +73,14 @@ public struct PinnedTabView<Icon: View>: View {
             .frame(minWidth: NookDesign.Size.essentialsTile)
             .contentShape(NookDesign.Radius.shape(NookDesign.Radius.lg))
             .nookRowSelection(isActive, radius: NookDesign.Radius.lg)
+            // On a glass panel the tile is a glass control; the selection fill sits on it.
+            .background {
+                if onGlassPanel {
+                    NookDesign.Radius.shape(NookDesign.Radius.lg)
+                        .fill(.clear)
+                        .nookControlGlass(in: NookDesign.Radius.shape(NookDesign.Radius.lg))
+                }
+            }
             .nookElevation(isActive ? .raised : .flat)
         }
         .buttonStyle(.plain)
@@ -81,8 +90,11 @@ public struct PinnedTabView<Icon: View>: View {
     }
 
     //MARK: - Colors
-    /// Clear when selected: `nookRowSelection` draws the raised surface.
+    /// Clear when selected: `nookRowSelection` draws the raised surface. On a glass panel the
+    /// glass is the idle tile, so only hover adds a fill.
     private var backgroundColor: Color {
-        isActive ? .clear : (isHovered ? NookDesign.Surface.fillPressed : NookDesign.Surface.fill)
+        if isActive { return .clear }
+        if onGlassPanel { return isHovered ? NookDesign.Surface.glassRowHover : .clear }
+        return isHovered ? NookDesign.Surface.fillPressed : NookDesign.Surface.fill
     }
 }

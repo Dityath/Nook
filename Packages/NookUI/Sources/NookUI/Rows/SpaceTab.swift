@@ -19,6 +19,7 @@ public struct SpaceTab: View {
     var hasChildren = false
 
     @State private var isHovering: Bool = false
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
     @State private var isCloseHovering: Bool = false
     @State private var isResetHovering: Bool = false
     @State private var draftName: String = ""
@@ -225,7 +226,7 @@ public struct SpaceTab: View {
         if isCurrentTab {
             return Color.clear
         } else if isHovering {
-            return NookDesign.Surface.fill
+            return onGlassPanel ? NookDesign.Surface.glassRowHover : NookDesign.Surface.fill
         } else {
             return Color.clear
         }
