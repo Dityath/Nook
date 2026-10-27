@@ -39,6 +39,7 @@ public struct SettingsAppearanceTab: View {
                 Toggle("Preview link URL on hover", isOn: $settings.showLinkStatusBar)
                 Toggle("Show previews when hovering favorites", isOn: $settings.favoritePreviews)
                 Toggle("Show back, forward, reload and sidebar buttons", isOn: $settings.showNavigationButtons)
+                Toggle("Show space name in the sidebar", isOn: $settings.showSpaceName)
                 Toggle("Hide border", isOn: $settings.hideWebContentBorder)
             }
             #endif

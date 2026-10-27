@@ -71,8 +71,10 @@ struct SidebarWindowControlsView: View {
             Spacer(minLength: 0)
 
             // Gives way before the buttons: a long name fades out.
-            SpaceSwitcherTitle(onNewSpace: onNewSpace)
-                .layoutPriority(1)
+            if nookSettings.showSpaceName {
+                SpaceSwitcherTitle(onNewSpace: onNewSpace)
+                    .layoutPriority(1)
+            }
         }
         .frame(height: NookDesign.Size.chromeControl)
     }
