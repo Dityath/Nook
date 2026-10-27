@@ -148,6 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
                         // Middle click closes a sidebar tab, the same way Cmd+W does: a
                         // pinned tab or favorite keeps its place, a regular tab goes to
                         // the reopen history.
+                        manager.tabs.markNextRowAnimated()
                         manager.tabs.close(hoveredId)
                     } else if Self.isOverWebContent(event) {
                         // The page's own auxclick handler opens the link, if there is one.

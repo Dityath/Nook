@@ -27,6 +27,7 @@ struct SpaceView: View {
     @Environment(CommandPalette.self) private var commandPalette
     @Environment(TabOrganizerManager.self) private var tabOrganizerManager
     @Environment(\.nookSettings) private var nookSettings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var dragSession = NookDragSessionManager.shared
     @State private var isNewTabHovering = false
 
@@ -97,6 +98,7 @@ struct SpaceView: View {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                         rowView(row, zone: zone, split: split, isDropTarget: position == DropPosition(zone: zone, index: index, placement: .into))
                             .padding(.leading, CGFloat(row.depth) * NookDesign.Spacing.folderIndent)
+                            .transition(rowTransition(for: row.id))
                             // The line is indented to the level the drop lands at (dropDepth), so a
                             // line that puts the item inside a folder is always drawn inside it.
                             .overlay(alignment: .top) {
@@ -114,6 +116,8 @@ struct SpaceView: View {
                             }
                     }
                 }
+                // Only the tab the person just opened or closed springs; see TabsController.animatedRowID.
+                .animation(reduceMotion ? NookDesign.Motion.standard : NookDesign.Motion.tabSpring, value: tabs.rowMotionTick)
 
                 if allRows.isEmpty, !showsTail {
                     emptySectionSlot(isActive: dragSession.activeZone == zone)
@@ -138,6 +142,18 @@ struct SpaceView: View {
             }
         }
     }
+
+    /// A new tab grows in from slightly small, a closed one shrinks away; any other row just fades.
+    private func rowTransition(for id: UUID) -> AnyTransition {
+        guard id == tabs.animatedRowID, !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .scale(scale: Self.insertScale, anchor: .top).combined(with: .opacity),
+            removal: .scale(scale: Self.removalScale).combined(with: .opacity))
+    }
+
+    /// Scale a springing new row starts from, and one leaving shrinks to.
+    private static let insertScale: CGFloat = 0.92
+    private static let removalScale: CGFloat = 0.85
 
     private func emptySectionSlot(isActive: Bool) -> some View {
         NookDesign.Radius.shape(NookDesign.Radius.md)
@@ -229,6 +245,7 @@ struct SpaceView: View {
 
     private var newTabButton: some View {
         Button {
+            Haptics.tap()
             commandPalette.open()
         } label: {
             HStack(spacing: NookDesign.Spacing.md) {

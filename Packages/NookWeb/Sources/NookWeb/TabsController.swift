@@ -25,10 +25,38 @@ public final class TabsController {
     public static let homeURL = URL(string: "https://www.google.com")!
     static let undoLimit = 100
 
+    // MARK: - Row Motion
+
+    /// The next single tab open or close is the person's own and its row springs.
+    public func markNextRowAnimated() {
+        rowMotionArmed = true
+    }
+
+    /// Spends the armed flag on `itemID`; `force` animates it unarmed (a link's tab, a popup, a reopen).
+    func consumeRowMotion(_ itemID: UUID, force: Bool = false) {
+        defer { rowMotionArmed = false }
+        guard rowMotionArmed || force else { return }
+        animatedRowID = itemID
+        rowMotionTick &+= 1
+    }
+
+    /// A bulk change: whatever row sprang last does not spring again as part of it.
+    func clearRowMotion() {
+        rowMotionArmed = false
+        animatedRowID = nil
+    }
+
     // MARK: - State
 
     public private(set) var tree: TabTree
     public private(set) var device: DeviceState
+    /// The one sidebar row whose insertion or removal springs: a tab the person just opened or
+    /// closed by itself. Bulk and automatic changes leave it alone, so rows never spring by the dozen.
+    public private(set) var animatedRowID: UUID?
+    /// Bumped with each animated row change, so the list animates that change and no other.
+    public private(set) var rowMotionTick = 0
+    /// Armed by `markNextRowAnimated()`, spent by the next single open or close.
+    @ObservationIgnored private var rowMotionArmed = false
     public let loadOutcome: LoadOutcome
     public let directory: URL
     var isReadOnly: Bool {

@@ -144,6 +144,7 @@ public enum NookDesign {
         public static let flight = Animation.easeIn(duration: 0.6)       // a download flying from the page to its button
         public static let spring = Animation.snappy(duration: 0.3)      // palette, dialog, toast, drag reorder, gesture-tracked motion
         public static let pageSettle = Animation.spring(response: 0.25, dampingFraction: 1)  // the space pager's settle, so the dots land with the pages
+        public static let tabSpring = Animation.spring(response: 0.35, dampingFraction: 0.72)  // a tab row the person opened springs in, with a visible overshoot
     }
 
     // MARK: - Surface
