@@ -301,9 +301,7 @@ struct WindowView: View {
 
     @ViewBuilder
     private func WebContent() -> some View {
-        let cornerRadius: CGFloat = {
-            return 8
-        }()
+        let cornerRadius: CGFloat = glassMaterial == .legacy ? NookDesign.Radius.md : NookDesign.Radius.windowInset
         
         let hasTopBar = nookSettings.topBarAddressView
         let bordered = !nookSettings.hideWebContentBorder

@@ -196,13 +196,13 @@ struct SidebarAIChat: View {
                 Spacer()
 
                 Button(action: sendMessage) {
-                    // On the glass panel the send button is a glass circle of its own.
+                    // On glass the send button is a glass square like the other chrome buttons.
                     if onGlassPanel {
                         Image(systemName: "arrow.up")
                             .font(NookDesign.Font.label)
                             .foregroundStyle(messageText.isEmpty ? HierarchicalShapeStyle.tertiary : .primary)
                             .frame(width: NookDesign.Size.iconButton, height: NookDesign.Size.iconButton)
-                            .nookControlGlass(in: Circle())
+                            .nookControlGlass(in: NookDesign.Radius.shape(NookDesign.Radius.md))
                     } else {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(NookDesign.Font.titleLarge)

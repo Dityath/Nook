@@ -176,10 +176,14 @@ struct WebsiteView: View {
     @State private var isCommandPressed: Bool = false
     @State private var isDropTargeted: Bool = false
     
+    @Environment(\.nookGlassMaterial) private var glassMaterial
+
     private let dragCoordinateSpace = "splitPreview"
 
+    /// On macOS 26 the card's corners follow the window's, 8pt in.
     private var cornerRadius: CGFloat {
-        nookSettings.hideWebContentBorder ? 0 : NookDesign.Radius.md
+        if nookSettings.hideWebContentBorder { return 0 }
+        return glassMaterial == .legacy ? NookDesign.Radius.md : NookDesign.Radius.windowInset
     }
 
     private var webViewClipShape: AnyShape {

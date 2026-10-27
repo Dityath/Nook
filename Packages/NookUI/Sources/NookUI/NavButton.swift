@@ -19,8 +19,8 @@ public struct NookIconButtonStyle: ButtonStyle {
 
     let size: CGFloat
     let radius: CGFloat
-    /// A panel's own chrome button (title row, bottom bar, AI header): a glass circle on a glass
-    /// panel. Buttons inside rows, cards and fields never take glass.
+    /// A panel's own chrome button (title row, bottom bar, AI header): a glass rounded square on a
+    /// glass sidebar. Buttons inside rows, cards and fields never take glass.
     let glass: Bool
 
     public init(size: CGFloat = NookDesign.Size.iconButton, radius: CGFloat = NookDesign.Radius.md, glass: Bool = false) {
@@ -31,12 +31,12 @@ public struct NookIconButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         ZStack {
-            // A chrome button on a glass panel is a glass circle; elsewhere a fill shows on hover.
+            // A chrome button on glass is a glass rounded square; elsewhere a fill shows on hover.
             if glass && onGlassPanel {
-                Circle()
+                NookDesign.Radius.shape(radius)
                     .fill(.clear)
                     .frame(width: size, height: size)
-                    .nookControlGlass(in: Circle())
+                    .nookControlGlass(in: NookDesign.Radius.shape(radius))
             } else {
                 NookDesign.Radius.shape(radius)
                     .fill(fill(isPressed: configuration.isPressed))

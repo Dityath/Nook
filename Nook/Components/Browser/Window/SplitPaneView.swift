@@ -88,7 +88,8 @@ final class SplitPaneView: NSView {
     }
 
     private func updateMask() {
-        let radius = NookDesign.Radius.md
+        // On macOS 26 the pane's corners follow the window's, 8pt in.
+        let radius = GlassPolicy.osSupportsGlass ? NookDesign.Radius.windowInset : NookDesign.Radius.md
         // Toggling the border resizes the pane, so this reruns through setFrameSize.
         let outer = settings?.hideWebContentBorder == true ? 0 : radius
         maskLayer.path = TabCompositorWrapper.createUnevenRoundedRectPath(

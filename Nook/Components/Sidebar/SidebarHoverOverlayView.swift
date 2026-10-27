@@ -97,7 +97,7 @@ private struct OverlaySurface<Legacy: View>: ViewModifier {
             content
                 .background(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(agentChrome ? NookDesign.Surface.agentChromeOpacity : 0))
                 .nookPanelSurface(
-                    in: NookDesign.Radius.shape(NookDesign.Radius.panel),
+                    in: NookDesign.Radius.shape(NookDesign.Radius.windowInset),
                     tint: isIncognito ? NookDesign.Surface.privateTint : nil)
         }
     }

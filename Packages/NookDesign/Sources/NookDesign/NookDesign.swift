@@ -26,7 +26,7 @@ public enum NookDesign {
         public static let lg: CGFloat = 12     // essentials tile, card, settings group
         public static let xl: CGFloat = 16     // dialog, toast
         public static let xxl: CGFloat = 24    // command palette
-        public static let panel: CGFloat = 16  // the hover sidebar's floating glass panel
+        public static let windowInset: CGFloat = 18  // macOS 26: a card 8pt inside the window's 26pt corner (page card, hover sidebar), so the two curves run parallel
 
         public static func shape(_ radius: CGFloat) -> RoundedRectangle {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
