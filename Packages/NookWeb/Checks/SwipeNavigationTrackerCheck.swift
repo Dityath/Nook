@@ -17,6 +17,15 @@ struct SwipeNavigationTrackerCheck {
         armsAtThreshold()
         hysteresisFiresOncePerCrossing()
         cancelBelowThreshold()
+        fadeOnlyForPromptCommit()
+    }
+
+    /// A swipe on a pushState site never commits; a commit long after it is some other navigation
+    /// and must not fade in.
+    static func fadeOnlyForPromptCommit() {
+        precondition(SwipeNavigationTracker.fadesCommit(swipedAt: 100, committedAt: 100.4))
+        precondition(!SwipeNavigationTracker.fadesCommit(swipedAt: 100, committedAt: 160))
+        precondition(!SwipeNavigationTracker.fadesCommit(swipedAt: 100, committedAt: 99))
     }
 
     static func progressScales() {

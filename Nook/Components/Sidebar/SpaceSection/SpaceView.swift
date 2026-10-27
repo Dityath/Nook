@@ -143,11 +143,15 @@ struct SpaceView: View {
         }
     }
 
-    /// A new tab grows in from slightly small, a closed one shrinks away; any other row just fades.
+    /// A tab the person opened grows in from slightly small; any other new row fades. Every row
+    /// shrinks away: a removed row keeps the transition of its last render, before
+    /// `animatedRowID` named it, and a removal outside an animated change shows no transition.
     private func rowTransition(for id: UUID) -> AnyTransition {
-        guard id == tabs.animatedRowID, !reduceMotion else { return .opacity }
+        guard !reduceMotion else { return .opacity }
         return .asymmetric(
-            insertion: .scale(scale: Self.insertScale, anchor: .top).combined(with: .opacity),
+            insertion: id == tabs.animatedRowID
+                ? .scale(scale: Self.insertScale, anchor: .top).combined(with: .opacity)
+                : .opacity,
             removal: .scale(scale: Self.removalScale).combined(with: .opacity))
     }
 

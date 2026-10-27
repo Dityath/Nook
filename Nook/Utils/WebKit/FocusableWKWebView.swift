@@ -106,6 +106,9 @@ final class FocusableWKWebView: WKWebView, SessionWebView {
     /// their page, once the compositor has finished moving views.
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        // Another window, or the same window's PiP or agent host: the panels covering it differ,
+        // even when the frame does not, so recompute the inset.
+        needsLayout = true
         guard window == nil, let session = owningSession, session.isAgentPage else { return }
         DispatchQueue.main.async { [weak session] in
             guard let session else { return }
@@ -127,6 +130,7 @@ final class FocusableWKWebView: WKWebView, SessionWebView {
         }
     }
 
+    @available(macOS 26, *)
     private func coveredInsets() -> NSEdgeInsets {
         // WebKit throws on negative insets or insets as large as the view, both possible mid-layout.
         guard let window, bounds.height > 1, bounds.width > 1 else { return NSEdgeInsetsZero }
@@ -136,8 +140,12 @@ final class FocusableWKWebView: WKWebView, SessionWebView {
             let overlap = frame.maxY - window.contentLayoutRect.maxY
             return NSEdgeInsets(top: min(max(0, overlap), bounds.height - 1), left: 0, bottom: 0, right: 0)
         }
-        // Peek draws above the panels, and an agent page is parked off screen.
-        guard let session = owningSession, !session.isDetached, !session.isAgentPage,
+        // Sidebar PiP keeps the inset the page had, so the page does not reflow and move the video
+        // out from under the crop; `SidebarPiPCropView` shifts the crop by it.
+        if superview is SidebarPiPCropView { return obscuredContentInsets }
+        // Peek draws above the panels and a parked agent page is off screen. An agent page the
+        // person opened sits in the compositor like any tab and takes the inset.
+        guard let session = owningSession, !session.isDetached, !(superview is AgentPageHostView),
               let contentWidth = window.contentView?.bounds.width else { return NSEdgeInsetsZero }
         let edges = PanelCoverage.edges(for: window)
         let left = min(max(0, edges.left - frame.minX), bounds.width - 1)

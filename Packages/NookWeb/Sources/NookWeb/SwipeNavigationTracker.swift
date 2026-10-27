@@ -50,4 +50,13 @@ public struct SwipeNavigationTracker: Sendable {
     }
 
     public var shouldCommit: Bool { isArmed }
+
+    /// Seconds after a swipe within which the page it lands on fades in. A same-document swipe
+    /// (pushState sites) or a failed load never commits, so a later commit is someone else's.
+    public static let fadeWindow = 1.0
+
+    /// Whether a commit at `committedAt` is the swipe's own, both in seconds on one clock.
+    public static func fadesCommit(swipedAt: Double, committedAt: Double) -> Bool {
+        committedAt >= swipedAt && committedAt - swipedAt <= fadeWindow
+    }
 }

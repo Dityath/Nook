@@ -166,7 +166,7 @@ struct SidebarAIChat: View {
                     }
                 }
             }
-            .nookIconButtons()
+            .nookIconButtons(glass: true)
         }
         .padding(.horizontal, 8)
     }

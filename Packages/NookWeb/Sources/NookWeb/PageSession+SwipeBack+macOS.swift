@@ -69,19 +69,22 @@ extension PageSession {
         switch direction {
         case .back:
             // With no history, back closes the tab and shows its opener: nothing to fade in.
-            pendingSwipeFade = webView.canGoBack
+            swipeNavigatedAt = webView.canGoBack ? ProcessInfo.processInfo.systemUptime : nil
             goBack(in: webView)
         case .forward:
-            pendingSwipeFade = true
+            swipeNavigatedAt = ProcessInfo.processInfo.systemUptime
             if webView.canGoForward { webView.goForward() } else { goForward() }
         }
     }
 
-    /// The page a swipe landed on fades in once it commits. A page that never commits keeps full
-    /// opacity, since nothing dimmed it.
+    /// The page a swipe landed on fades in once it commits. A swipe that never commits (a
+    /// same-document history entry, a failed load) leaves a timestamp that any later commit is
+    /// too late for, so an unrelated navigation never fades.
     func fadeInAfterSwipe(_ webView: WKWebView) {
-        guard pendingSwipeFade else { return }
-        pendingSwipeFade = false
+        guard let swipedAt = swipeNavigatedAt else { return }
+        swipeNavigatedAt = nil
+        guard SwipeNavigationTracker.fadesCommit(
+            swipedAt: swipedAt, committedAt: ProcessInfo.processInfo.systemUptime) else { return }
         webView.alphaValue = Self.swipeFadeStartOpacity
         NSAnimationContext.runAnimationGroup { context in
             context.duration = NookDesign.Motion.standardDuration

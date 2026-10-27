@@ -257,18 +257,12 @@ struct WindowView: View {
     /// glass. `PanelCoverage` tells each web view how much of it they cover.
     @ViewBuilder
     private func FloatingPanelsStack() -> some View {
-        // The page starts at a panel's inner edge: covering the gap beside it too would show
-        // WebKit's under-page colour there as a band next to the glass.
-        let inset = NookDesign.Spacing.panelInset
         let sidebarOnLeft = nookSettings.sidebarPosition == .left
-        let sidebarCover = windowState.isSidebarVisible ? windowState.sidebarWidth + inset : 0
-        let aiCover = windowState.isSidebarAIChatVisible ? windowState.aiSidebarWidth + inset : 0
+        let covered = pagePanelInsets
 
         ZStack {
             WebContent()
-                .environment(\.nookPagePanelInsets, EdgeInsets(
-                    top: 0, leading: sidebarOnLeft ? sidebarCover : aiCover,
-                    bottom: 0, trailing: sidebarOnLeft ? aiCover : sidebarCover))
+                .environment(\.nookPagePanelInsets, covered)
 
             HStack(spacing: 0) {
                 if sidebarOnLeft {
@@ -284,9 +278,20 @@ struct WindowView: View {
                 }
             }
         }
-        .background(PanelCoverageReporter(
-            left: sidebarOnLeft ? sidebarCover : aiCover,
-            right: sidebarOnLeft ? aiCover : sidebarCover))
+        .background(PanelCoverageReporter(left: covered.leading, right: covered.trailing))
+    }
+
+    /// How much of the page the docked panels cover on each side; zero in the old layout. The page
+    /// starts at a panel's inner edge: covering the gap beside it too would show WebKit's
+    /// under-page colour there as a band next to the glass.
+    private var pagePanelInsets: EdgeInsets {
+        guard panelsFloat else { return EdgeInsets() }
+        let inset = NookDesign.Spacing.panelInset
+        let sidebarCover = windowState.isSidebarVisible ? windowState.sidebarWidth + inset : 0
+        let aiCover = windowState.isSidebarAIChatVisible ? windowState.aiSidebarWidth + inset : 0
+        let sidebarOnLeft = nookSettings.sidebarPosition == .left
+        return EdgeInsets(top: 0, leading: sidebarOnLeft ? sidebarCover : aiCover,
+                          bottom: 0, trailing: sidebarOnLeft ? aiCover : sidebarCover)
     }
 
     @ViewBuilder
@@ -301,6 +306,9 @@ struct WindowView: View {
     /// neither is mistaken for a regular window.
     private func floatingPanel<Content: View>(_ content: Content) -> some View {
         content
+            // The page under the panel would otherwise claim the title band's drag; the panel's
+            // empty areas move the window, as the window background did behind the old sidebar.
+            .background(Color.clear.contentShape(Rectangle()).backgroundDraggable())
             .background(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(showsAgentSpace ? NookDesign.Surface.agentChromeOpacity : 0))
             .nookPanelSurface(
                 in: NookDesign.Radius.shape(NookDesign.Radius.panel),
@@ -375,9 +383,12 @@ struct WindowView: View {
                 }
 
                 if hasTopBar {
+                    // Between the floating panels, so its controls are never under the glass.
                     TopBarView()
                         .environmentObject(browserManager)
                         .environment(windowState)
+                        .padding(.leading, pagePanelInsets.leading)
+                        .padding(.trailing, pagePanelInsets.trailing)
                         .zIndex(2500)
                 }
 
@@ -407,11 +418,15 @@ struct WindowView: View {
             if !bordered {
                 WebsiteLoadingIndicator()
                     .allowsHitTesting(false)
+                    .padding(.leading, pagePanelInsets.leading)
+                    .padding(.trailing, pagePanelInsets.trailing)
             }
         }
         .overlay {
             if aiService.isExecutingTools {
                 ToolExecutionGlowView()
+                    .padding(.leading, pagePanelInsets.leading)
+                    .padding(.trailing, pagePanelInsets.trailing)
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                     .allowsHitTesting(false)
             }

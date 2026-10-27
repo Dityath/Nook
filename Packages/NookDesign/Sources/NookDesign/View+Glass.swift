@@ -45,14 +45,23 @@ public extension View {
     }
 }
 
+// Every recipe below is one modifier chain whatever the material, switching values rather than
+// branches (`.identity` glass, clear fills), so turning Reduce Transparency on or off keeps the
+// views under it, their state and any web view they host, where they are. The only branch is
+// `#available`, which never changes while the app runs.
+
 private struct PanelControl<G: InsettableShape, S: InsettableShape>: ViewModifier {
     let glassShape: G
     let shape: S
     @Environment(\.nookOnGlassPanel) private var onGlassPanel
 
     func body(content: Content) -> some View {
-        if onGlassPanel {
-            content.clipShape(glassShape).nookControlGlass(in: glassShape)
+        if #available(macOS 26, iOS 26, *) {
+            let drawn = onGlassPanel ? AnyShape(glassShape) : AnyShape(shape)
+            content
+                .clipShape(drawn)
+                .background(drawn.fill(onGlassPanel ? Color.clear : NookDesign.Surface.fill))
+                .glassEffect(onGlassPanel ? .regular.interactive() : .identity, in: drawn)
         } else {
             content.clipShape(shape).background(shape.fill(NookDesign.Surface.fill))
         }
@@ -66,29 +75,24 @@ private struct PanelSurface<S: InsettableShape>: ViewModifier {
     @Environment(\.appearsActive) private var appearsActive
 
     func body(content: Content) -> some View {
-        switch material {
-        case .legacy:
+        // `.legacy` is fixed by the OS, so this branch never flips at run time.
+        if material != .legacy, #available(macOS 26, iOS 26, *) {
+            let glass = material == .glass
             content
-        case .glass:
-            if #available(macOS 26, iOS 26, *) {
-                content
-                    .environment(\.nookOnGlassPanel, true)
-                    // Under the content, over the glass: an inactive window's panel steps back.
-                    .background(shape.fill(appearsActive ? Color.clear : NookDesign.Surface.inactivePanelDim))
-                    // glassEffect leaves the content unclipped, so a full-bleed fill would run out
-                    // to square corners and the shadow would trace the square.
-                    .clipShape(shape)
-                    .glassEffect(.regular.tint(tint), in: shape)
-            } else {
-                content
-            }
-        case .solid:
-            content
-                .background(shape.fill(tint ?? .clear))
-                .background(shape.fill(NookDesign.Surface.raised))
+                .environment(\.nookOnGlassPanel, glass)
+                // Under the content, over the glass: an inactive window's panel steps back.
+                .background(shape.fill(glass && !appearsActive ? NookDesign.Surface.inactivePanelDim : Color.clear))
+                // Opaque: the raised card, tinted for a private window.
+                .background(shape.fill(glass ? Color.clear : (tint ?? Color.clear)))
+                .background(shape.fill(glass ? Color.clear : NookDesign.Surface.raised))
+                // glassEffect leaves the content unclipped, so a full-bleed fill would run out
+                // to square corners and the shadow would trace the square.
                 .clipShape(shape)
-                .overlay(shape.strokeBorder(NookDesign.Surface.hairline, lineWidth: NookDesign.Size.hairlineWidth))
-                .nookElevation(.floating)
+                .overlay(shape.strokeBorder(NookDesign.Surface.hairline.opacity(glass ? 0 : 1), lineWidth: NookDesign.Size.hairlineWidth))
+                .glassEffect(glass ? .regular.tint(tint) : .identity, in: shape)
+                .nookElevation(glass ? .flat : .floating)
+        } else {
+            content
         }
     }
 }
@@ -98,24 +102,33 @@ private struct ControlGlass<S: InsettableShape>: ViewModifier {
     @Environment(\.nookGlassMaterial) private var material
 
     func body(content: Content) -> some View {
-        if material == .glass, #available(macOS 26, iOS 26, *) {
-            content.glassEffect(.regular.interactive(), in: shape)
+        if #available(macOS 26, iOS 26, *) {
+            let glass = material == .glass
+            content
+                .background(shape.fill(glass ? Color.clear : NookDesign.Surface.fill))
+                .glassEffect(glass ? .regular.interactive() : .identity, in: shape)
         } else {
             content.background(shape.fill(NookDesign.Surface.fill))
         }
     }
 }
 
-/// `nookFloatingSurface`'s body: glass over the page, else the solid card it always was.
+/// `nookFloatingSurface`'s body: glass over the page, else the solid card it always was. A card
+/// inside a glass panel (update and what's-new cards, downloads hover) stays solid: never glass
+/// on glass.
 struct FloatingSurface<S: InsettableShape>: ViewModifier {
     let shape: S
     @Environment(\.nookGlassMaterial) private var material
+    @Environment(\.nookOnGlassPanel) private var onGlassPanel
 
     func body(content: Content) -> some View {
-        if material == .glass, #available(macOS 26, iOS 26, *) {
+        if #available(macOS 26, iOS 26, *) {
+            let glass = material == .glass && !onGlassPanel
             content
                 .clipShape(shape)
-                .glassEffect(.regular, in: shape)
+                .background(shape.fill(glass ? Color.clear : NookDesign.Surface.raised))
+                .overlay(shape.strokeBorder(NookDesign.Surface.hairline.opacity(glass ? 0 : 1), lineWidth: NookDesign.Size.hairlineWidth))
+                .glassEffect(glass ? .regular : .identity, in: shape)
                 .nookElevation(.floating)
         } else {
             content
@@ -136,12 +149,9 @@ struct RowSelection: ViewModifier {
 
     func body(content: Content) -> some View {
         let shape = NookDesign.Radius.shape(radius)
-        if onGlassPanel {
-            content.background(shape.fill(isSelected ? NookDesign.Surface.glassRowSelected : .clear))
-        } else {
-            content
-                .background(shape.fill(isSelected ? NookDesign.Surface.raised : .clear))
-                .overlay(shape.strokeBorder(NookDesign.Surface.hairline.opacity(isSelected ? 1 : 0), lineWidth: NookDesign.Size.hairlineWidth))
-        }
+        let fill = onGlassPanel ? NookDesign.Surface.glassRowSelected : NookDesign.Surface.raised
+        content
+            .background(shape.fill(isSelected ? fill : .clear))
+            .overlay(shape.strokeBorder(NookDesign.Surface.hairline.opacity(isSelected && !onGlassPanel ? 1 : 0), lineWidth: NookDesign.Size.hairlineWidth))
     }
 }

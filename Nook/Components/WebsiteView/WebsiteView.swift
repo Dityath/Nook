@@ -177,6 +177,7 @@ struct WebsiteView: View {
     @State private var isDropTargeted: Bool = false
     
     @Environment(\.nookGlassMaterial) private var glassMaterial
+    @Environment(\.nookPagePanelInsets) private var panelInsets
 
     private let dragCoordinateSpace = "splitPreview"
 
@@ -247,6 +248,7 @@ struct WebsiteView: View {
                     // WKWebView's willOpenMenu will handle context menus for images
                 } else {
                     EmptyWebsiteView()
+                        .modifier(BesidePanels(insets: panelInsets))
                 }
             }
             VStack {
@@ -264,6 +266,7 @@ struct WebsiteView: View {
                 }
                 
             }
+            .modifier(BesidePanels(insets: panelInsets))
             
             // WebKit's PDF bar is off (BrowserConfiguration.hidePDFHUD); these replace it.
             if !shouldShowSplit,
@@ -275,10 +278,12 @@ struct WebsiteView: View {
                     PDFControlsView(session: session, webView: webView)
                         .padding(.bottom, NookDesign.Spacing.xxxl)
                 }
+                .modifier(BesidePanels(insets: panelInsets))
             }
 
             if !shouldShowSplit, let session = browserManager.tabs.controllableSession(in: windowState) {
                 BlockedPageView(session: session)
+                    .modifier(BesidePanels(insets: panelInsets))
             }
 
             swipeBubbles
@@ -298,6 +303,7 @@ struct WebsiteView: View {
                             .padding(.top, NookDesign.Spacing.lg)
                         Spacer()
                     }
+                    .modifier(BesidePanels(insets: panelInsets))
                 }
             }
 
@@ -317,6 +323,7 @@ struct WebsiteView: View {
             // A glance or a screenshot of the window shows that an agent drives this page.
             if windowState.spaceID != nil, windowState.spaceID == browserManager.tabs.agentSpaceID {
                 AgentFrame(shape: webViewClipShape, busy: browserManager.tabs.agentCallsInFlight > 0)
+                    .modifier(BesidePanels(insets: panelInsets))
             }
         }
     }
@@ -957,5 +964,15 @@ private class ContainerView: NSView {
             }
         }
         return nil
+    }
+}
+
+/// Keeps an overlay on the part of the page the floating glass panels leave visible. Padding by
+/// zero insets (no panels, or before macOS 26) changes nothing.
+private struct BesidePanels: ViewModifier {
+    let insets: EdgeInsets
+
+    func body(content: Content) -> some View {
+        content.padding(.leading, insets.leading).padding(.trailing, insets.trailing)
     }
 }

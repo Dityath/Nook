@@ -66,7 +66,7 @@ struct SidebarWindowControlsView: View {
                     }
                 }
             }
-            .nookIconButtons()
+            .nookIconButtons(glass: true)
 
             Spacer(minLength: 0)
 

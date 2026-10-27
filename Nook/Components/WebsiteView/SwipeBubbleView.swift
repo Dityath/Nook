@@ -62,7 +62,9 @@ struct SwipeBubbleView: View {
                 .foregroundStyle(.primary)
         }
         .frame(width: size, height: size)
-        .nookControlGlass(in: Circle())
+        // Glass over the page; a raised card where there is no glass (before macOS 26, Reduce
+        // Transparency, the mini window), since a faint fill vanishes on a busy page.
+        .nookFloatingSurface(in: Circle())
         .scaleEffect(indicator.isArmed ? 1.1 : 0.85 + 0.15 * indicator.progress)
         .opacity(0.4 + 0.6 * indicator.progress)
     }

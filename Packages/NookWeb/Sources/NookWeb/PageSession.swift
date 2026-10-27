@@ -196,8 +196,8 @@ public final class PageSession: NSObject, Identifiable {
 
     /// Back and forward history kept across an unload, so the next view comes back with it.
     @ObservationIgnored var savedHistory: Any?
-    /// Set when a swipe navigates, so the page it lands on fades in at commit.
-    @ObservationIgnored var pendingSwipeFade = false
+    /// When a swipe last navigated (system uptime), so the page it lands on fades in at commit.
+    @ObservationIgnored var swipeNavigatedAt: TimeInterval?
     /// One-shot initial-navigation suppression for a WebKit-created popup.
     @ObservationIgnored var isPopupHost: Bool = false
     /// JavaScript dialogs since the last commit, and whether the user silenced the page.

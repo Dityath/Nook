@@ -50,7 +50,7 @@ struct SidebarBottomBar: View {
             }
             // A finished download bounces the button its icon flew into.
             .symbolEffect(.bounce, value: browserManager.downloadManager.completedCount)
-            .nookIconButtons()
+            .nookIconButtons(glass: true)
             .anchorPreference(key: DownloadsButtonAnchorKey.self, value: .bounds) { $0 }
             .onHoverTracking { isHovered in
                 isMenuButtonHovered = isHovered
@@ -98,7 +98,7 @@ struct SidebarBottomBar: View {
             Label("Actions", systemImage: "plus")
         }
         .menuStyle(.button)
-        .nookIconButtons()
+        .nookIconButtons(glass: true)
     }
 }
 
