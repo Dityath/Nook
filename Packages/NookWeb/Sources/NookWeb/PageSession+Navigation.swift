@@ -483,7 +483,9 @@ extension PageSession {
             webView.evaluateJavaScript(Self.pageTextScript, in: nil, in: Self.pageTextWorld) { [weak self] result in
                 guard case .success(let value) = result, let parts = value as? [String], parts.count == 2,
                       parts[1].utf16.count >= 100 else { return }
-                self?.controller?.history?.recordPageText(url: url, title: parts[0], body: parts[1])
+                // The same profile the visit was filed under, so the text stays in that space's history.
+                let profileId = self?.profile?.id ?? self?.controller?.sessionDelegate?.currentProfile?.id
+                self?.controller?.history?.recordPageText(url: url, title: parts[0], body: parts[1], profileId: profileId)
             }
         }
     }

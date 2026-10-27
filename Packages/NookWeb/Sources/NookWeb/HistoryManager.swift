@@ -98,31 +98,31 @@ public final class HistoryManager {
         enqueue { store in
             await store.clear(days: days, profile: profile)
             // Page text goes with its history row, whichever space cleared it.
-            if let pageText { await pageText.retain(only: await store.allURLs()) }
+            if let pageText { await pageText.retain(only: await store.allPageTextKeys()) }
         }
     }
 
     public func deleteHistoryEntry(_ entryId: UUID) {
         let pageText = pageText
         enqueue { store in
-            if let url = await store.delete(entryId) { await pageText?.delete(url: url) }
+            if let key = await store.delete(entryId) { await pageText?.delete(key) }
         }
     }
 
     // MARK: - Page Text
 
     /// Queued behind history writes, so a Clear issued after a capture also removes it.
-    public func recordPageText(url: URL, title: String, body: String) {
+    public func recordPageText(url: URL, title: String, body: String, profileId: UUID? = nil) {
         guard let pageText, url.scheme == "http" || url.scheme == "https" else { return }
-        let key = url.absoluteString, date = Date()
-        enqueue { _ in await pageText.record(url: key, title: title, body: body, visitedAt: date) }
+        let key = HistoryTextIndex.Key(profile: profileId ?? currentProfileId, url: url.absoluteString), date = Date()
+        enqueue { _ in await pageText.record(key, title: title, body: body, visitedAt: date) }
     }
 
     /// History rows whose page text matches every word of `query`, best match first.
     public func searchPageText(query: String, limit: Int) async -> [HistoryEntry] {
         guard let pageText else { return [] }
         let profile = currentProfileId
-        let urls = await pageText.search(query, limit: limit * 3).map(\.url)
+        let urls = await pageText.search(query, profile: profile, limit: limit * 3).map(\.url)
         guard !Task.isCancelled, !urls.isEmpty else { return [] }
         // Through the history store, so only rows this space can see come back.
         return Array(await storeTask.value.entries(forURLs: urls, profile: profile).prefix(limit))
@@ -309,15 +309,15 @@ actor HistoryStore {
 
     /// Deletes one row and returns its URL.
     @discardableResult
-    func delete(_ id: UUID) -> String? {
+    func delete(_ id: UUID) -> HistoryTextIndex.Key? {
         do {
             var descriptor = FetchDescriptor<HistoryEntity>(predicate: #Predicate { $0.id == id })
             descriptor.fetchLimit = 1
-            let url = try modelContext.fetch(descriptor).first?.url
+            let key = try modelContext.fetch(descriptor).first.map { HistoryTextIndex.Key(profile: $0.profileId, url: $0.url) }
             try modelContext.delete(model: HistoryEntity.self, where: #Predicate { $0.id == id })
             try modelContext.save()
             autofillCache = nil
-            return url
+            return key
         } catch {
             Self.logger.error("History deletion failed: \(error.localizedDescription, privacy: .public)")
             return nil
@@ -325,10 +325,10 @@ actor HistoryStore {
     }
 
     /// Every URL still in history, across spaces.
-    func allURLs() -> Set<String> {
+    func allPageTextKeys() -> Set<HistoryTextIndex.Key> {
         var descriptor = FetchDescriptor<HistoryEntity>()
-        descriptor.propertiesToFetch = [\.url]
-        return Set(((try? modelContext.fetch(descriptor)) ?? []).map(\.url))
+        descriptor.propertiesToFetch = [\.url, \.profileId]
+        return Set(((try? modelContext.fetch(descriptor)) ?? []).map { HistoryTextIndex.Key(profile: $0.profileId, url: $0.url) })
     }
 
     /// The rows `profile` sees for `urls`, in the order given, one per URL.
