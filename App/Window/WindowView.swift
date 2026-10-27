@@ -202,8 +202,8 @@ struct WindowView: View {
 
     // MARK: - Layout Components
 
-    /// The chrome's material. Anything but `.legacy` floats the panels over a full-window page;
-    /// Reduce Transparency only turns their glass opaque.
+    /// The chrome's material: `.legacy` before macOS 26, else glass (opaque under Reduce
+    /// Transparency, which the behind-window material follows on its own).
     private var glassMaterial: GlassMaterial {
         GlassPolicy.material(
             supportsGlass: GlassPolicy.osSupportsGlass,
@@ -211,17 +211,20 @@ struct WindowView: View {
             increaseContrast: colorSchemeContrast == .increased)
     }
 
-    private var panelsFloat: Bool { glassMaterial != .legacy }
-
     @ViewBuilder
     private func WindowBackground() -> some View {
-        if panelsFloat {
-            // The page covers the window; this only shows before a page draws.
-            NookDesign.Surface.windowBackground
+        if glassMaterial == .legacy {
+            LegacyWindowBackground()
+        } else {
+            // Behind the docked sidebar, the AI panel and the page's border: the desktop and the
+            // windows behind Nook, frosted, as a Finder sidebar shows them. The space's colour
+            // stays in the space dots; private windows and the Agent space keep their tint.
+            BehindWindowMaterial()
+                .overlay(windowState.isIncognito ? NookDesign.Surface.privateTint : Color.clear)
+                .overlay(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(showsAgentSpace ? NookDesign.Surface.agentChromeOpacity : 0))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .backgroundDraggable()
-        } else {
-            LegacyWindowBackground()
+                .environment(windowState)
         }
     }
 
@@ -246,78 +249,6 @@ struct WindowView: View {
 
     @ViewBuilder
     private func SidebarWebViewStack() -> some View {
-        if panelsFloat {
-            FloatingPanelsStack()
-        } else {
-            LegacySidebarWebViewStack()
-        }
-    }
-
-    /// macOS 26: the page fills the window and the sidebar and AI panel float over its edges as
-    /// glass. `PanelCoverage` tells each web view how much of it they cover.
-    @ViewBuilder
-    private func FloatingPanelsStack() -> some View {
-        let sidebarOnLeft = nookSettings.sidebarPosition == .left
-        let covered = pagePanelInsets
-
-        ZStack {
-            WebContent()
-                .environment(\.nookPagePanelInsets, covered)
-
-            HStack(spacing: 0) {
-                if sidebarOnLeft {
-                    sidebarPanel
-                } else if windowState.isSidebarAIChatVisible {
-                    floatingPanel(AISidebar())
-                }
-                Spacer(minLength: 0)
-                if !sidebarOnLeft {
-                    sidebarPanel
-                } else if windowState.isSidebarAIChatVisible {
-                    floatingPanel(AISidebar())
-                }
-            }
-        }
-        .background(PanelCoverageReporter(left: covered.leading, right: covered.trailing))
-    }
-
-    /// How much of the page the docked panels cover on each side; zero in the old layout. The page
-    /// starts at a panel's inner edge: covering the gap beside it too would show WebKit's
-    /// under-page colour there as a band next to the glass.
-    private var pagePanelInsets: EdgeInsets {
-        guard panelsFloat else { return EdgeInsets() }
-        let inset = NookDesign.Spacing.panelInset
-        let sidebarCover = windowState.isSidebarVisible ? windowState.sidebarWidth + inset : 0
-        let aiCover = windowState.isSidebarAIChatVisible ? windowState.aiSidebarWidth + inset : 0
-        let sidebarOnLeft = nookSettings.sidebarPosition == .left
-        return EdgeInsets(top: 0, leading: sidebarOnLeft ? sidebarCover : aiCover,
-                          bottom: 0, trailing: sidebarOnLeft ? aiCover : sidebarCover)
-    }
-
-    @ViewBuilder
-    private var sidebarPanel: some View {
-        if windowState.isSidebarVisible {
-            floatingPanel(SpacesSidebar())
-                .transition(.move(edge: nookSettings.sidebarPosition == .left ? .leading : .trailing).combined(with: .opacity))
-        }
-    }
-
-    /// One glass panel. Private windows and the Agent space keep their tint on the glass, so
-    /// neither is mistaken for a regular window.
-    private func floatingPanel<Content: View>(_ content: Content) -> some View {
-        content
-            // The page under the panel would otherwise claim the title band's drag; the panel's
-            // empty areas move the window, as the window background did behind the old sidebar.
-            .background(Color.clear.contentShape(Rectangle()).backgroundDraggable())
-            .background(Rectangle().fill(NookDesign.Surface.agentGradient).opacity(showsAgentSpace ? NookDesign.Surface.agentChromeOpacity : 0))
-            .nookPanelSurface(
-                in: NookDesign.Radius.shape(NookDesign.Radius.panel),
-                tint: windowState.isIncognito ? NookDesign.Surface.privateTint : nil)
-            .padding(NookDesign.Spacing.panelInset)
-    }
-
-    @ViewBuilder
-    private func LegacySidebarWebViewStack() -> some View {
         let aiVisible = windowState.isSidebarAIChatVisible
         let aiAppearsOnTrailingEdge = nookSettings.sidebarPosition == .left
         let sidebarVisible = windowState.isSidebarVisible
@@ -350,6 +281,8 @@ struct WindowView: View {
     private func SpacesSidebar() -> some View {
         if windowState.isSidebarVisible {
             SpacesSideBarView()
+                // On the behind-window glass: chrome buttons and fields take the glass look.
+                .environment(\.nookOnGlassPanel, glassMaterial == .glass)
                 .frame(width: windowState.sidebarWidth)
                 .overlay(alignment: nookSettings.sidebarPosition == .left ? .trailing : .leading) {
                     SidebarResizeView()
@@ -373,7 +306,7 @@ struct WindowView: View {
         }()
         
         let hasTopBar = nookSettings.topBarAddressView
-        let bordered = !nookSettings.hideWebContentBorder && !panelsFloat
+        let bordered = !nookSettings.hideWebContentBorder
 
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
@@ -383,12 +316,9 @@ struct WindowView: View {
                 }
 
                 if hasTopBar {
-                    // Between the floating panels, so its controls are never under the glass.
                     TopBarView()
                         .environmentObject(browserManager)
                         .environment(windowState)
-                        .padding(.leading, pagePanelInsets.leading)
-                        .padding(.trailing, pagePanelInsets.trailing)
                         .zIndex(2500)
                 }
 
@@ -418,15 +348,11 @@ struct WindowView: View {
             if !bordered {
                 WebsiteLoadingIndicator()
                     .allowsHitTesting(false)
-                    .padding(.leading, pagePanelInsets.leading)
-                    .padding(.trailing, pagePanelInsets.trailing)
             }
         }
         .overlay {
             if aiService.isExecutingTools {
                 ToolExecutionGlowView()
-                    .padding(.leading, pagePanelInsets.leading)
-                    .padding(.trailing, pagePanelInsets.trailing)
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
                     .allowsHitTesting(false)
             }
@@ -440,6 +366,7 @@ struct WindowView: View {
         let handleAlignment: Alignment = nookSettings.sidebarPosition == .left ? .leading : .trailing
         
         DevPanelColumn()
+            .environment(\.nookOnGlassPanel, glassMaterial == .glass)
             .frame(width: windowState.aiSidebarWidth)
             .overlay(alignment: handleAlignment) {
                 AISidebarResizeView()

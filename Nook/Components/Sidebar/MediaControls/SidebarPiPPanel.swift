@@ -768,14 +768,8 @@ final class SidebarPiPCropView: NSView {
         // than showing page around it.
         let scale = max(bounds.width / crop.width, bounds.height / crop.height)
         let inset = CGPoint(x: (bounds.width - crop.width * scale) / 2, y: (bounds.height - crop.height * scale) / 2)
-        // The crop is in the page's layout coordinates; WebKit draws that layout shifted by the
-        // insets a floating glass panel left on the page (FocusableWKWebView.coveredInsets).
-        var drawnOffset = CGPoint.zero
-        if #available(macOS 26, *), let page = subviews.first(where: { $0 is WKWebView }) as? WKWebView {
-            drawnOffset = CGPoint(x: page.obscuredContentInsets.left, y: page.obscuredContentInsets.top)
-        }
         layer.sublayerTransform = CATransform3DConcat(
-            CATransform3DConcat(CATransform3DMakeTranslation(-(crop.minX + drawnOffset.x), -(crop.minY + drawnOffset.y), 0),
+            CATransform3DConcat(CATransform3DMakeTranslation(-crop.minX, -crop.minY, 0),
                                 CATransform3DMakeScale(scale, scale, 1)),
             CATransform3DMakeTranslation(inset.x, inset.y, 0))
     }

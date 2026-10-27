@@ -11,25 +11,18 @@ import SwiftUI
 import NookDesign
 import NookWeb
 
-extension EnvironmentValues {
-    /// How much of the page area floating panels cover on each side, so overlays that belong to
-    /// the page's edge (the swipe bubble) sit beside the panels rather than under them.
-    @Entry var nookPagePanelInsets = EdgeInsets()
-}
-
 /// The bubble for one page, placed at its edge inside `rect` (the page's frame in this view).
 struct SwipeBubbleOverlay: View {
     let session: PageSession
     var rect: CGRect? = nil
-    @Environment(\.nookPagePanelInsets) private var panelInsets
     @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         GeometryReader { proxy in
             if let indicator = session.swipeIndicator {
                 let frame = rect ?? CGRect(origin: .zero, size: proxy.size)
-                let leading = frame.minX + (frame.minX == 0 ? panelInsets.leading : 0)
-                let trailing = frame.maxX - (frame.maxX >= proxy.size.width ? panelInsets.trailing : 0)
+                let leading = frame.minX
+                let trailing = frame.maxX
                 let atLeadingEdge = (indicator.direction == .back) == (layoutDirection == .leftToRight)
                 let size = NookDesign.Size.swipeBubble
                 // Slides from half hidden at the edge to fully in as the ring fills.

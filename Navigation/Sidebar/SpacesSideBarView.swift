@@ -32,12 +32,6 @@ struct SpacesSideBarView: View {
     @State private var isDownloadsHovered = false
     @State private var showDownloadsMenu = false
     @State private var animateDownloadsMenu: Bool = false
-    @Environment(\.nookGlassMaterial) private var glassMaterial
-
-    /// How far a floating glass panel sits in from the window's top-left corner.
-    private var panelOffset: CGFloat {
-        glassMaterial == .legacy ? 0 : NookDesign.Spacing.panelInset
-    }
 
     var body: some View {
         sidebarContent
@@ -139,14 +133,12 @@ struct SpacesSideBarView: View {
             .environment(windowState)
         }
         // Extra top padding when sidebar is on the left to avoid overlapping native traffic light buttons
-        .padding(.top, nookSettings.sidebarPosition == .left ? NookDesign.Spacing.sidebarTop - panelOffset : NookDesign.Spacing.sidebarInset)
+        .padding(.top, nookSettings.sidebarPosition == .left ? NookDesign.Spacing.sidebarTop : NookDesign.Spacing.sidebarInset)
         .overlay(alignment: .topLeading) {
             if nookSettings.sidebarPosition == .left {
-                // A floating panel starts `panelInset` in from the window's corner, so the band
-                // shrinks by it on both sides to stay centred on the traffic lights.
                 titleRow
-                    .frame(height: NookDesign.Spacing.sidebarTop - panelOffset * 2)
-                    .padding(.leading, NookDesign.Spacing.trafficLights - panelOffset)
+                    .frame(height: NookDesign.Spacing.sidebarTop)
+                    .padding(.leading, NookDesign.Spacing.trafficLights)
                     .padding(.trailing, NookDesign.Spacing.sidebarInset)
             }
         }

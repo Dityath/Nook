@@ -26,7 +26,7 @@ public enum NookDesign {
         public static let lg: CGFloat = 12     // essentials tile, card, settings group
         public static let xl: CGFloat = 16     // dialog, toast
         public static let xxl: CGFloat = 24    // command palette
-        public static let panel: CGFloat = 16  // floating glass panel: sidebar, AI panel, hover sidebar
+        public static let panel: CGFloat = 16  // the hover sidebar's floating glass panel
 
         public static func shape(_ radius: CGFloat) -> RoundedRectangle {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -46,7 +46,6 @@ public enum NookDesign {
         public static let xxxl: CGFloat = 24
 
         public static let sidebarInset: CGFloat = 8
-        public static let panelInset: CGFloat = 8      // gap between a floating glass panel and the window edge
         public static let rowGap: CGFloat = 2
         public static let sectionGap: CGFloat = 10
         public static let rowPadding: CGFloat = 8
