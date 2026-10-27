@@ -388,6 +388,12 @@ struct SpacesSideBarView: View {
                     .environmentObject(browserManager)
                     .environment(windowState)
             }
+            if nookSettings.aiButtonInTitleRow {
+                Button("Toggle AI Assistant", systemImage: "sparkle") {
+                    browserManager.toggleAISidebar(for: windowState)
+                }
+                .nookIconButtons(glass: true)
+            }
         }
     }
 

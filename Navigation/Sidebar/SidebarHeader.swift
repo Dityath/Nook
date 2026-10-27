@@ -8,6 +8,7 @@
 
 import SwiftUI
 import NookDesign
+import NookSettings
 import NookWeb
 import NookUI
 
@@ -22,7 +23,11 @@ struct SidebarHeader: View {
 
     var body: some View {
         VStack(spacing: NookDesign.Spacing.sectionGap) {
-            windowControls
+            // Nothing left in the row once its buttons and the space name are all hidden.
+            if nookSettings.showNavigationButtons || nookSettings.showSpaceName
+                || (nookSettings.showAIAssistant && !nookSettings.aiButtonInTitleRow) {
+                windowControls
+            }
 
             if !nookSettings.topBarAddressView {
                 urlBar
@@ -43,6 +48,14 @@ struct SidebarHeader: View {
     }
 }
 
+extension NookSettingsService {
+    /// With back, forward, reload and the sidebar toggle hidden, the AI button moves up into the
+    /// traffic-light row, which only a left sidebar draws.
+    var aiButtonInTitleRow: Bool {
+        !showNavigationButtons && showAIAssistant && sidebarPosition == .left
+    }
+}
+
 // MARK: - Sidebar Window Controls
 /// The sidebar and AI toggles, with the space name at the trailing edge.
 struct SidebarWindowControlsView: View {
@@ -60,7 +73,7 @@ struct SidebarWindowControlsView: View {
                     }
                 }
 
-                if nookSettings.showAIAssistant {
+                if nookSettings.showAIAssistant && !nookSettings.aiButtonInTitleRow {
                     Button("Toggle AI Assistant", systemImage: "sparkle") {
                         browserManager.toggleAISidebar(for: windowState)
                     }
