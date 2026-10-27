@@ -109,6 +109,8 @@ public final class PageSession: NSObject, Identifiable {
     public var isLoading: Bool { loadingState.isLoading }
     public var canGoBack: Bool = false
     public var canGoForward: Bool = false
+    /// The swipe bubble while a two-finger back or forward swipe is in flight.
+    public var swipeIndicator: SwipeIndicator?
     /// WebKit's own PDF viewer is showing the page, so Nook draws its controls over it.
     public var isDisplayingPDF: Bool = false
     /// Bumped whenever the PDF controls should show: a PDF loads, or the pointer moves over one.
@@ -194,8 +196,8 @@ public final class PageSession: NSObject, Identifiable {
 
     /// Back and forward history kept across an unload, so the next view comes back with it.
     @ObservationIgnored var savedHistory: Any?
-    /// Counts back and forward swipes, so a late snapshot cleanup never touches a newer swipe.
-    @ObservationIgnored var navigationGestureCount = 0
+    /// Set when a swipe navigates, so the page it lands on fades in at commit.
+    @ObservationIgnored var pendingSwipeFade = false
     /// One-shot initial-navigation suppression for a WebKit-created popup.
     @ObservationIgnored var isPopupHost: Bool = false
     /// JavaScript dialogs since the last commit, and whether the user silenced the page.
@@ -354,7 +356,8 @@ public final class PageSession: NSObject, Identifiable {
         (webView as? SessionWebView)?.owningSession = self
         webView.navigationDelegate = self
         webView.uiDelegate = self
-        webView.allowsBackForwardNavigationGestures = true
+        // Nook tracks two-finger swipes itself (PageSession+SwipeBack+macOS.swift).
+        webView.allowsBackForwardNavigationGestures = false
         webView.allowsMagnification = true
         setupThemeColorObserver(for: webView)
         setupNavigationStateObservers(for: webView)
@@ -413,7 +416,8 @@ public final class PageSession: NSObject, Identifiable {
         (webView as? SessionWebView)?.contextMenuBridge = WebContextMenuBridge(session: self, configuration: webView.configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
-        webView.allowsBackForwardNavigationGestures = true
+        // Nook tracks two-finger swipes itself (PageSession+SwipeBack+macOS.swift).
+        webView.allowsBackForwardNavigationGestures = false
         webView.allowsMagnification = true
         primaryWebView = webView
         configure(webView)

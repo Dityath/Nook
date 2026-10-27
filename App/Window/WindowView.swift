@@ -266,6 +266,9 @@ struct WindowView: View {
 
         ZStack {
             WebContent()
+                .environment(\.nookPagePanelInsets, EdgeInsets(
+                    top: 0, leading: sidebarOnLeft ? sidebarCover : aiCover,
+                    bottom: 0, trailing: sidebarOnLeft ? aiCover : sidebarCover))
 
             HStack(spacing: 0) {
                 if sidebarOnLeft {

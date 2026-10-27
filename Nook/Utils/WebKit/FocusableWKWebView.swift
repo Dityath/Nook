@@ -65,11 +65,14 @@ final class FocusableWKWebView: WKWebView, SessionWebView {
         return false
     }
 
-    /// A three-finger or Magic Mouse swipe back. WebKit only acts on it with history, so on a
-    /// page opened from another tab it returns there, like the two-finger swipe.
+    /// A three-finger or Magic Mouse swipe. WebKit's navigation gestures are off for pages, so
+    /// back (returning to the opener on a page with no history) and forward are handled here.
     override func swipe(with event: NSEvent) {
-        if event.deltaX > 0, !canGoBack, let session = owningSession, session.canGoBackOrReturn {
+        guard let session = owningSession else { return super.swipe(with: event) }
+        if event.deltaX > 0, session.canGoBackOrReturn {
             session.goBack(in: self)
+        } else if event.deltaX < 0, canGoForward {
+            goForward()
         } else {
             super.swipe(with: event)
         }
@@ -158,22 +161,18 @@ final class FocusableWKWebView: WKWebView, SessionWebView {
         }
     }
 
-    /// With navigation gestures on and no back item, WebKit bounces the page's back edge whatever
-    /// its edge setting, which uses up the swipe before `PageSession`'s
-    /// `_webView:didNotHandleWheelEvent:` can see it. For a swipe back on a page opened from another
-    /// tab, gestures go off and that edge stays still, the state a page with history is in; a
-    /// carousel still scrolls. Only swipes back toggle it, so page snapshots keep recording.
+    /// A rubber-banding edge uses up a horizontal swipe before `PageSession`'s
+    /// `_webView:didNotHandleWheelEvent:` can see it. At the start of a swipe that can go back or
+    /// forward, the edge it pulls stays still, so the swipe bubble gets the events; a carousel
+    /// still scrolls, since WebKit reports only what the page did not use.
     override func scrollWheel(with event: NSEvent) {
-        if event.phase == .began {
+        if event.phase == .began, let session = owningSession, !session.isAgentPage {
             let rightToLeft = userInterfaceLayoutDirection == .rightToLeft
-            let isSwipeBack = abs(event.scrollingDeltaY) < abs(event.scrollingDeltaX) / 2
-                && (rightToLeft ? event.scrollingDeltaX < 0 : event.scrollingDeltaX > 0)
-            let returnsToOpener = isSwipeBack && !canGoBack && owningSession?.canGoBackOrReturn == true
-            if allowsBackForwardNavigationGestures == returnsToOpener {
-                allowsBackForwardNavigationGestures = !returnsToOpener
-            }
-            let backEdge: UInt = rightToLeft ? 4 : 1  // _WKRectEdgeRight, _WKRectEdgeLeft
-            setRubberBandingEdges(returnsToOpener ? 15 & ~backEdge : 15)  // 15: _WKRectEdgeAll, WebKit's default
+            let backward = rightToLeft ? event.scrollingDeltaX < 0 : event.scrollingDeltaX > 0
+            let swipes = abs(event.scrollingDeltaY) < abs(event.scrollingDeltaX) / 2
+                && (backward ? session.canGoBackOrReturn : session.canGoForward)
+            let pulledEdge: UInt = backward != rightToLeft ? 1 : 4  // _WKRectEdgeLeft, _WKRectEdgeRight
+            setRubberBandingEdges(swipes ? 15 & ~pulledEdge : 15)  // 15: _WKRectEdgeAll, WebKit's default
         }
         super.scrollWheel(with: event)
     }

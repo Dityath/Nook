@@ -95,6 +95,8 @@ public enum NookDesign {
         public static let pipSkip: CGFloat = 48        // PiP skip buttons, as in the system PiP window
         public static let pipPlay: CGFloat = 64        // PiP play/pause, as in the system PiP window
         public static let pipScrub: CGFloat = 4        // PiP scrubber track
+        public static let swipeBubble: CGFloat = 52    // the glass bubble a two-finger swipe back or forward pulls in
+        public static let swipeRing: CGFloat = 2.5     // its progress ring's stroke
         // Narrowest sidebar: the lights (88), the history pill (110), the inset (8).
         public static let sidebarMin: CGFloat = 206
 

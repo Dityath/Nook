@@ -3,79 +3,90 @@
 //  PageSession+SwipeBack+macOS.swift
 //  NookWeb
 //
-//  Trackpad swipes: back to the tab that opened a page with no history, and the snapshot WebKit
-//  shows after a swipe.
+//  Two-finger swipes for back and forward. WebKit's own gesture is off: the page stays still while
+//  a glass bubble (`swipeIndicator`, drawn by the app) fills at the edge, a haptic marks the point
+//  where letting go navigates, and the page it lands on fades in.
 //
 
 #if os(macOS)
 import AppKit
+import NookDesign
 import WebKit
 
+/// What the swipe bubble shows.
+public struct SwipeIndicator: Equatable, Sendable {
+    public let direction: SwipeDirection
+    /// 0 to 1: how full the bubble's ring is.
+    public let progress: Double
+    /// Letting go now navigates.
+    public let isArmed: Bool
+}
+
 extension PageSession {
-    /// WebKit's own swipe needs a back item, so it never starts here. It reports only the wheel
-    /// events the page did not scroll with, so a carousel or map under the pointer keeps its swipe.
-    /// The progress range copies WebKit's (`ViewGestureController`).
+    /// Opacity the page a swipe lands on starts from before it fades in.
+    private static let swipeFadeStartOpacity: CGFloat = 0.35
+
+    /// WebKit reports only the wheel events the page did not scroll with, so a carousel or map
+    /// under the pointer keeps its swipe. `FocusableWKWebView.scrollWheel` keeps the edge being
+    /// swiped from rubber-banding, which would use the events up first.
     @objc(_webView:didNotHandleWheelEvent:)
     func webView(_ webView: WKWebView, didNotHandleWheelEvent event: NSEvent) {
         guard event.phase == .began, event.hasPreciseScrollingDeltas,
-              NSEvent.isSwipeTrackingFromScrollEventsEnabled,
-              abs(event.scrollingDeltaY) < abs(event.scrollingDeltaX) / 2,
-              !webView.canGoBack, controller?.opener(of: itemID) != nil else { return }
+              NSEvent.isSwipeTrackingFromScrollEventsEnabled, !isAgentPage, swipeIndicator == nil,
+              abs(event.scrollingDeltaY) < abs(event.scrollingDeltaX) / 2 else { return }
         let rightToLeft = webView.userInterfaceLayoutDirection == .rightToLeft
-        guard rightToLeft ? event.scrollingDeltaX < 0 : event.scrollingDeltaX > 0 else { return }
-        var cancelled = false
+        let backward = rightToLeft ? event.scrollingDeltaX < 0 : event.scrollingDeltaX > 0
+        guard backward ? canGoBackOrReturn : canGoForward else { return }
+
+        let direction: SwipeDirection = backward ? .back : .forward
+        var tracker = SwipeNavigationTracker(direction: direction)
+        var decided: Bool?
+        let fingersMoveRight = event.scrollingDeltaX > 0
         event.trackSwipeEvent(
             options: [.lockDirection, .clampGestureAmount],
-            dampenAmountThresholdMin: rightToLeft ? -1 : 0, max: rightToLeft ? 0 : 1
+            dampenAmountThresholdMin: fingersMoveRight ? 0 : -1, max: fingersMoveRight ? 1 : 0
         ) { [weak self, weak webView] amount, phase, isComplete, _ in
-            guard let webView else { return }
-            webView.layer?.setAffineTransform(CGAffineTransform(translationX: amount * webView.bounds.width, y: 0))
-            if phase == .cancelled { cancelled = true }
-            guard isComplete else { return }
-            // Close first, so a finished swipe does not flash the page back into place.
-            if !cancelled { self?.goBack(in: webView) }
-            webView.layer?.setAffineTransform(.identity)
+            guard let self else { return }
+            // Once the fingers lift, AppKit animates the amount home or out; the decision is the
+            // tracker's state at that moment, not where the animation ends.
+            if decided == nil {
+                if tracker.update(amount: abs(Double(amount))) != nil {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                }
+                if phase == .ended || phase == .cancelled { decided = tracker.shouldCommit }
+            }
+            // The ring follows the amount all the way, so a cancelled swipe drains as it slides back.
+            swipeIndicator = isComplete ? nil : SwipeIndicator(
+                direction: direction,
+                progress: min(Double(abs(amount)) / SwipeNavigationTracker.commitThreshold, 1),
+                isArmed: decided ?? tracker.isArmed)
+            guard isComplete, decided == true, let webView else { return }
+            navigateAfterSwipe(direction, in: webView)
         }
     }
 
-    // MARK: - Swipe Snapshot
-
-    /// After a swipe WebKit covers the page with a snapshot until the page restores its scroll
-    /// position. A site that restores scroll itself (`history.scrollRestoration = "manual"`, as
-    /// Reddit does) never reports that, so the page sat dead under the snapshot for WebKit's 3 s
-    /// watchdog. Once the swipe has ended and the page is not loading, the snapshot goes.
-    /// ponytail: fixed 300 ms wait; tune it if pages show half drawn or still feel slow.
-    @objc(_webViewDidBeginNavigationGesture:)
-    func webViewDidBeginNavigationGesture(_ webView: WKWebView) {
-        navigationGestureCount += 1
-    }
-
-    @objc(_webViewDidEndNavigationGesture:withNavigationToBackForwardListItem:)
-    func webViewDidEndNavigationGesture(_ webView: WKWebView, withNavigationTo item: WKBackForwardListItem?) {
-        guard item != nil else { return }
-        let gesture = navigationGestureCount
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(300)) { [weak self, weak webView] in
-            guard let self, let webView, gesture == self.navigationGestureCount, !webView.isLoading,
-                  webView.callBool("_isShowingNavigationGestureSnapshot") == true else { return }
-            // Testing SPI, but the only way in: it removes the snapshot once the swipe has ended.
-            webView.callVoid("_resetNavigationGestureStateForTesting")
+    private func navigateAfterSwipe(_ direction: SwipeDirection, in webView: WKWebView) {
+        switch direction {
+        case .back:
+            // With no history, back closes the tab and shows its opener: nothing to fade in.
+            pendingSwipeFade = webView.canGoBack
+            goBack(in: webView)
+        case .forward:
+            pendingSwipeFade = true
+            if webView.canGoForward { webView.goForward() } else { goForward() }
         }
     }
-}
 
-private extension WKWebView {
-    func callBool(_ name: String) -> Bool? {
-        let selector = NSSelectorFromString(name)
-        guard responds(to: selector) else { return nil }
-        typealias Getter = @convention(c) (AnyObject, Selector) -> Bool
-        return unsafeBitCast(method(for: selector), to: Getter.self)(self, selector)
-    }
-
-    func callVoid(_ name: String) {
-        let selector = NSSelectorFromString(name)
-        guard responds(to: selector) else { return }
-        typealias Call = @convention(c) (AnyObject, Selector) -> Void
-        unsafeBitCast(method(for: selector), to: Call.self)(self, selector)
+    /// The page a swipe landed on fades in once it commits. A page that never commits keeps full
+    /// opacity, since nothing dimmed it.
+    func fadeInAfterSwipe(_ webView: WKWebView) {
+        guard pendingSwipeFade else { return }
+        pendingSwipeFade = false
+        webView.alphaValue = Self.swipeFadeStartOpacity
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = NookDesign.Motion.standardDuration
+            webView.animator().alphaValue = 1
+        }
     }
 }
 #endif
