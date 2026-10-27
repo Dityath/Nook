@@ -54,8 +54,10 @@ struct SidebarWindowControlsView: View {
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: NookDesign.Spacing.xxs) {
-                Button("Toggle Sidebar", systemImage: nookSettings.sidebarPosition == .left ? "sidebar.left" : "sidebar.right") {
-                    browserManager.toggleSidebar(for: windowState)
+                if nookSettings.showNavigationButtons {
+                    Button("Toggle Sidebar", systemImage: nookSettings.sidebarPosition == .left ? "sidebar.left" : "sidebar.right") {
+                        browserManager.toggleSidebar(for: windowState)
+                    }
                 }
 
                 if nookSettings.showAIAssistant {

@@ -391,7 +391,7 @@ struct SpacesSideBarView: View {
     private var titleRow: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            if !nookSettings.topBarAddressView {
+            if !nookSettings.topBarAddressView && nookSettings.showNavigationButtons {
                 SidebarHistoryButtons()
                     .environmentObject(browserManager)
                     .environment(windowState)

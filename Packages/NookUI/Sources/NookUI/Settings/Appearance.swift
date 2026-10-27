@@ -38,7 +38,7 @@ public struct SettingsAppearanceTab: View {
                 Toggle("Show URL bar in the web view", isOn: $settings.topBarAddressView)
                 Toggle("Preview link URL on hover", isOn: $settings.showLinkStatusBar)
                 Toggle("Show previews when hovering favorites", isOn: $settings.favoritePreviews)
-                Toggle("Hide border", isOn: $settings.hideWebContentBorder)
+                Toggle("Show back, forward, reload and sidebar buttons", isOn: $settings.showNavigationButtons)
             }
             #endif
         }

@@ -35,7 +35,9 @@ struct TopBarView: View {
             // Main content
             ZStack {
                 HStack(spacing: 8) {
-                    navigationControls
+                    if nookSettings.showNavigationButtons {
+                        navigationControls
+                    }
 
                     urlBar
 
