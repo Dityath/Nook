@@ -47,13 +47,13 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Websites you allow can use your microphone, for example for calls.</string>
 	<key>SUAllowsAutomaticUpdates</key>
-	<true/>
+	<false/>
 	<key>SUAutomaticallyInstall</key>
-	<true/>
+	<false/>
 	<key>SUAutomaticallyUpdate</key>
-	<true/>
+	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUEnableDowngrade</key>
 	<false/>
 	<key>SUFeedURL</key>
