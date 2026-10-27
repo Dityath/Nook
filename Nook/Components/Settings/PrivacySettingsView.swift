@@ -103,8 +103,8 @@ struct PrivacySettingsView: View {
 
             Section("Privacy Controls") {
                 Toggle("Block Cross-Site Tracking", isOn: $settings.blockCrossSiteTracking)
-                    .onChange(of: nookSettings.blockCrossSiteTracking) { _, enabled in
-                        browserManager.contentBlockerManager.setEnabled(enabled)
+                    .onChange(of: nookSettings.blockCrossSiteTracking) { _, _ in
+                        browserManager.contentBlockerManager.setEnabled(nookSettings.contentBlockerEnabled)
                     }
                 Toggle("Search Page Text in History", isOn: $settings.searchPageTextInHistory)
                     .onChange(of: nookSettings.searchPageTextInHistory) { _, enabled in

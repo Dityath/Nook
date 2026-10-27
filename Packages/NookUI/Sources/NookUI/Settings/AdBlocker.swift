@@ -24,8 +24,8 @@ public struct SettingsAdBlockerTab: View {
         Form {
             Section {
                 Toggle("Ad & Tracker Blocker", isOn: $settings.adBlockerEnabled)
-                    .onChange(of: nookSettings.adBlockerEnabled) { _, enabled in
-                        contentBlocker?.setEnabled(enabled)
+                    .onChange(of: nookSettings.adBlockerEnabled) { _, _ in
+                        contentBlocker?.setEnabled(nookSettings.contentBlockerEnabled)
                     }
             } footer: {
                 Text("Filter lists update automatically every 24 hours.")

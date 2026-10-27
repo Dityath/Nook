@@ -502,7 +502,7 @@ class BrowserManager: ObservableObject {
         self.contentBlockerManager.attach(host: self)
         // Launch waits on the blocker, so it starts here and not when the first window appears,
         // about 190 ms later. NookApp's own call then finds it already under way.
-        self.contentBlockerManager.setEnabled(settings.blockCrossSiteTracking || settings.adBlockerEnabled)
+        self.contentBlockerManager.setEnabled(settings.contentBlockerEnabled)
         self.siteRoutingManager.host = self
         SocialImageTweaks.downloader = self
         // Note: tracking protection will be configured after settingsManager injection
@@ -520,25 +520,14 @@ class BrowserManager: ObservableObject {
             object: nil
         )
 
-        NotificationCenter.default.addObserver(
-            forName: .blockCrossSiteTrackingChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let enabled = note.userInfo?["enabled"] as? Bool else { return }
-            Task { @MainActor [weak self] in
-                self?.contentBlockerManager.setEnabled(enabled)
-            }
-        }
-
-        NotificationCenter.default.addObserver(
-            forName: .adBlockerEnabledChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let enabled = note.userInfo?["enabled"] as? Bool else { return }
-            Task { @MainActor [weak self] in
-                self?.contentBlockerManager.setEnabled(enabled)
+        // Either toggle changing re-reads both: turning one off must not stop the blocker
+        // while the other is still on.
+        for name in [Notification.Name.blockCrossSiteTrackingChanged, .adBlockerEnabledChanged] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, let settings = self.nookSettings else { return }
+                    self.contentBlockerManager.setEnabled(settings.contentBlockerEnabled)
+                }
             }
         }
 

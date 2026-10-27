@@ -169,6 +169,11 @@ public final class NookSettingsService {
         }
     }
 
+    /// Both toggles run the one content blocker, so it stays on while either is on.
+    public var contentBlockerEnabled: Bool {
+        blockCrossSiteTracking || adBlockerEnabled
+    }
+
     public var adBlockerWhitelist: [String] {
         didSet {
             if let data = try? JSONEncoder().encode(adBlockerWhitelist) {

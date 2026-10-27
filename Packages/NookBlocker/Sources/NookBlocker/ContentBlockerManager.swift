@@ -27,6 +27,9 @@ public final class ContentBlockerManager: NSObject {
     private let settings: NookSettingsService
     public private(set) var isEnabled = false
     public private(set) var isCompiling = false
+    /// What settings last asked for. A change that arrives mid-compile is applied when the
+    /// compile ends; dropping it left the blocker on after both toggles were turned off.
+    private var wantsEnabled = false
 
     public init(settings: NookSettingsService) {
         self.settings = settings
@@ -135,14 +138,26 @@ public final class ContentBlockerManager: NSObject {
     }
 
     public func setEnabled(_ enabled: Bool) {
-        cbLog.info("setEnabled(\(enabled)) — current isEnabled=\(self.isEnabled)")
-        guard enabled != isEnabled, !isCompiling else { return }
-        if enabled {
+        cbLog.info("setEnabled(\(enabled)) — current isEnabled=\(self.isEnabled) isCompiling=\(self.isCompiling)")
+        wantsEnabled = enabled
+        guard !isCompiling else { return }
+        applyWantedState()
+    }
+
+    private func applyWantedState() {
+        guard wantsEnabled != isEnabled else { return }
+        if wantsEnabled {
             isCompiling = true  // set synchronously so a second setEnabled(true) before the Task starts is a no-op
             activationTask = Task { @MainActor in await activateBlocking() }
         } else {
             deactivateBlocking()
         }
+    }
+
+    /// Ends a list update's compile, then applies a setEnabled that arrived during it.
+    private func finishCompiling() {
+        isCompiling = false
+        applyWantedState()
     }
 
     // MARK: - Activation
@@ -156,6 +171,10 @@ public final class ContentBlockerManager: NSObject {
         await rebuild()
 
         isCompiling = false
+        guard wantsEnabled else {
+            cbLog.info("Turned off while compiling; rules left unapplied")
+            return
+        }
         isEnabled = true
         applyToSharedConfiguration()
         // Later activations are a Settings toggle: those pages were loaded unblocked on purpose.
@@ -216,13 +235,15 @@ public final class ContentBlockerManager: NSObject {
     public func updateFilterLists() async -> Bool {
         guard isEnabled, !isCompiling else { return false }
         isCompiling = true
-        defer { isCompiling = false }
+        defer { finishCompiling() }
 
         let updated = await filterListManager.downloadAllLists()
         if updated {
             await rebuild()
-            applyToSharedConfiguration()
-            applyToExistingWebViews()
+            if wantsEnabled {
+                applyToSharedConfiguration()
+                applyToExistingWebViews()
+            }
             cbLog.info("Filter lists updated and recompiled")
         }
         settings.adBlockerLastUpdate = Date()
@@ -233,12 +254,14 @@ public final class ContentBlockerManager: NSObject {
     public func recompileFilterLists() async {
         guard isEnabled, !isCompiling else { return }
         isCompiling = true
-        defer { isCompiling = false }
+        defer { finishCompiling() }
 
         await filterListManager.downloadAllLists(force: true)
         await rebuild()
-        applyToSharedConfiguration()
-        applyToExistingWebViews()
+        if wantsEnabled {
+            applyToSharedConfiguration()
+            applyToExistingWebViews()
+        }
         settings.adBlockerLastUpdate = Date()
         NotificationCenter.default.post(name: .adBlockerStateChanged, object: nil)
         cbLog.info("Filter lists recompiled")

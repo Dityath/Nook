@@ -162,9 +162,7 @@ struct NookApp: App {
         browserManager.compositorManager.setMode(
             settingsManager.tabManagementMode
         )
-        browserManager.contentBlockerManager.setEnabled(
-            settingsManager.blockCrossSiteTracking || settingsManager.adBlockerEnabled
-        )
+        browserManager.contentBlockerManager.setEnabled(settingsManager.contentBlockerEnabled)
 
         // Apply appearance mode
         applyAppearanceMode(settingsManager.appearanceMode)
