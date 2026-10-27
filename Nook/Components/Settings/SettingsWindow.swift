@@ -52,6 +52,8 @@ struct SettingsWindow: View {
                 )
             )
             .environmentObject(browserManager)
+            .environmentObject(browserManager.cookieManager)
+            .environmentObject(browserManager.cacheManager)
             .environmentObject(gradientColorManager)
             // Rebuilds the pane per tab so each opens scrolled to the top.
             .id(tab)

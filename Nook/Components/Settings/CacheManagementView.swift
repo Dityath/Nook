@@ -10,7 +10,8 @@ import SwiftUI
 import NookDesign
 
 struct CacheManagementView: View {
-    @StateObject private var cacheManager = CacheManager()
+    /// BrowserManager's, so the list is the active space's data (see PrivacySettingsView).
+    @EnvironmentObject private var cacheManager: CacheManager
     @State private var searchText: String = ""
     @State private var selectedFilter: CacheFilter = .all
     @State private var selectedSort: CacheSortOption = .domain

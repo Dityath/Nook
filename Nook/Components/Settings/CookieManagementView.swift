@@ -10,7 +10,8 @@ import SwiftUI
 import NookDesign
 
 struct CookieManagementView: View {
-    @StateObject private var cookieManager = CookieManager()
+    /// BrowserManager's, so the list is the active space's cookies (see PrivacySettingsView).
+    @EnvironmentObject private var cookieManager: CookieManager
     @State private var searchText: String = ""
     @State private var selectedFilter: CookieFilter = .all
     @State private var selectedSort: CookieSortOption = .domain

@@ -15,8 +15,10 @@ import NookWeb
 struct PrivacySettingsView: View {
     @EnvironmentObject var browserManager: BrowserManager
     @Environment(\.nookSettings) var nookSettings
-    @StateObject private var cookieManager = CookieManager()
-    @StateObject private var cacheManager = CacheManager()
+    // BrowserManager's, which follow the active window's space. A fresh manager here would
+    // read and clear WKWebsiteDataStore.default(), which no tab uses.
+    @EnvironmentObject private var cookieManager: CookieManager
+    @EnvironmentObject private var cacheManager: CacheManager
     @State private var isClearing = false
 
     var body: some View {
@@ -349,6 +351,9 @@ struct PrivacySettingsView: View {
 }
 
 #Preview {
+    let browserManager = BrowserManager(settings: NookSettingsService(), windowRegistry: WindowRegistry())
     PrivacySettingsView()
-        .environmentObject(BrowserManager(settings: NookSettingsService(), windowRegistry: WindowRegistry()))
+        .environmentObject(browserManager)
+        .environmentObject(browserManager.cookieManager)
+        .environmentObject(browserManager.cacheManager)
 }
